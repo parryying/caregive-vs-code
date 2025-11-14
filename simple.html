@@ -337,6 +337,114 @@
             color: #3b82f6;
             text-decoration: none;
         }
+        
+        /* Time Logs Modal */
+        .time-logs-modal .modal-content {
+            max-width: 900px;
+            width: 95%;
+            max-height: 90vh;
+        }
+        
+        .time-logs-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1rem 0;
+            font-size: 0.875rem;
+        }
+        
+        .time-logs-table th,
+        .time-logs-table td {
+            padding: 0.75rem 0.5rem;
+            text-align: left;
+            border-bottom: 1px solid #e5e7eb;
+            vertical-align: middle;
+        }
+        
+        .time-logs-table th {
+            background: #f9fafb;
+            font-weight: 600;
+            color: #374151;
+            position: sticky;
+            top: 0;
+            z-index: 1;
+        }
+        
+        .time-logs-table tbody tr:hover {
+            background: #f3f4f6;
+        }
+        
+        .log-actions {
+            display: flex;
+            gap: 0.25rem;
+            flex-wrap: wrap;
+        }
+        
+        .log-actions button {
+            padding: 0.25rem 0.5rem;
+            border: none;
+            border-radius: 0.25rem;
+            cursor: pointer;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+        
+        .edit-btn {
+            background: #3b82f6;
+            color: white;
+        }
+        
+        .delete-btn {
+            background: #ef4444;
+            color: white;
+        }
+        
+        .add-entry-btn {
+            background: #10b981;
+            color: white;
+            margin-bottom: 1rem;
+        }
+        
+        .time-input {
+            width: 100%;
+            padding: 0.5rem;
+            border: 1px solid #d1d5db;
+            border-radius: 0.25rem;
+            font-size: 0.875rem;
+        }
+        
+        .form-row {
+            display: flex;
+            gap: 1rem;
+            margin: 0.75rem 0;
+            align-items: center;
+        }
+        
+        .form-group {
+            flex: 1;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 0.25rem;
+            font-weight: 500;
+            font-size: 0.875rem;
+        }
+        
+        @media (max-width: 768px) {
+            .time-logs-table {
+                font-size: 0.75rem;
+            }
+            
+            .time-logs-table th,
+            .time-logs-table td {
+                padding: 0.5rem 0.25rem;
+            }
+            
+            .form-row {
+                flex-direction: column;
+                gap: 0.5rem;
+            }
+        }
     </style>
 </head>
 <body>
@@ -418,12 +526,17 @@
                 </div>
             </div>
             
-            <!-- Google Sheets Setup Button -->
-            <div style="margin-top: 1rem;">
+            <!-- Control Buttons -->
+            <div style="margin-top: 1rem; display: flex; gap: 0.5rem; flex-wrap: wrap;">
                 <button class="btn" id="setupSheetsBtn" onclick="showGoogleSheetsSetup()" 
-                        style="background: #f59e0b; color: white; font-size: 0.875rem;">
+                        style="background: #f59e0b; color: white; font-size: 0.875rem; flex: 1;">
                     Setup Google Sheets | 设置谷歌表格
                 </button>
+                <button class="btn" id="viewLogsBtn" onclick="showTimeLogsModal()" 
+                        style="background: #3b82f6; color: white; font-size: 0.875rem; flex: 1;">
+                    📋 View Time Logs | 查看时间记录
+                </button>
+            </div>
                 <div id="syncStatus" style="margin-top: 0.5rem; font-size: 0.875rem;">
                     <span id="syncIndicator" style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #ef4444; margin-right: 0.5rem;"></span>
                     <span id="syncText">Not Connected</span>
@@ -537,6 +650,114 @@ function doPost(e) {<br>
                     <div style="display: flex; gap: 1rem; margin-top: 1.5rem;">
                         <button type="button" onclick="hideAddCaregiverModal()" style="flex: 1; padding: 0.75rem; border: 1px solid #ccc; background: white; border-radius: 0.25rem; cursor: pointer;">Cancel | 取消</button>
                         <button type="submit" class="btn" style="flex: 1; background: #10b981; color: white; padding: 0.75rem; border-radius: 0.25rem;">Add Caregiver | 添加护工</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Time Logs Modal -->
+    <div id="timeLogsModal" class="modal time-logs-modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Time Logs | 时间记录 <span id="logsCaregiverName"></span></h3>
+                <button class="close-btn" onclick="hideTimeLogsModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <button class="btn add-entry-btn" onclick="showAddEntryForm()">
+                    ➕ Add Manual Entry | 手动添加记录
+                </button>
+                
+                <div id="addEntryForm" style="display: none; background: #f9fafb; padding: 1rem; border-radius: 0.5rem; margin-bottom: 1rem;">
+                    <h4>Add Time Entry | 添加时间记录</h4>
+                    <form onsubmit="addManualEntry(event)">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Date | 日期:</label>
+                                <input type="date" id="entryDate" class="time-input" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Clock In | 上班时间:</label>
+                                <input type="datetime-local" id="clockInTime" class="time-input" required>
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Clock Out | 下班时间:</label>
+                                <input type="datetime-local" id="clockOutTime" class="time-input" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Notes | 备注:</label>
+                                <input type="text" id="entryNotes" class="time-input" placeholder="Optional notes...">
+                            </div>
+                        </div>
+                        <div style="display: flex; gap: 1rem;">
+                            <button type="button" onclick="hideAddEntryForm()" style="flex: 1; padding: 0.5rem; background: #6b7280; color: white; border: none; border-radius: 0.25rem;">Cancel | 取消</button>
+                            <button type="submit" style="flex: 1; padding: 0.5rem; background: #10b981; color: white; border: none; border-radius: 0.25rem;">Add Entry | 添加记录</button>
+                        </div>
+                    </form>
+                </div>
+                
+                <div style="max-height: 400px; overflow-y: auto;">
+                    <table class="time-logs-table">
+                        <thead>
+                            <tr>
+                                <th>Date | 日期</th>
+                                <th>Clock In | 上班</th>
+                                <th>Clock Out | 下班</th>
+                                <th>Hours | 小时</th>
+                                <th>Notes | 备注</th>
+                                <th>Actions | 操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="timeLogsTableBody">
+                            <!-- Time logs will be populated here -->
+                        </tbody>
+                    </table>
+                </div>
+                
+                <div style="margin-top: 1rem; text-align: center; color: #6b7280; font-size: 0.875rem;">
+                    <p>Total Hours This Week: <strong id="weeklyHours">0.0</strong> | 本周总小时数</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Entry Modal -->
+    <div id="editEntryModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Edit Time Entry | 编辑时间记录</h3>
+                <button class="close-btn" onclick="hideEditEntryModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form onsubmit="saveEditedEntry(event)">
+                    <input type="hidden" id="editEntryId">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Date | 日期:</label>
+                            <input type="date" id="editEntryDate" class="time-input" required>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Clock In Time | 上班时间:</label>
+                            <input type="datetime-local" id="editClockInTime" class="time-input" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Clock Out Time | 下班时间:</label>
+                            <input type="datetime-local" id="editClockOutTime" class="time-input" required>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Notes | 备注:</label>
+                            <input type="text" id="editEntryNotes" class="time-input" placeholder="Optional notes...">
+                        </div>
+                    </div>
+                    <div style="display: flex; gap: 1rem; margin-top: 1rem;">
+                        <button type="button" onclick="hideEditEntryModal()" style="flex: 1; padding: 0.5rem; background: #6b7280; color: white; border: none; border-radius: 0.25rem;">Cancel | 取消</button>
+                        <button type="submit" style="flex: 1; padding: 0.5rem; background: #3b82f6; color: white; border: none; border-radius: 0.25rem;">Save Changes | 保存更改</button>
                     </div>
                 </form>
             </div>
@@ -1392,6 +1613,310 @@ The Google Apps Script URL is incorrect or the deployment doesn't exist.
         function loadData() {
             // This is now handled by loadCaregiverData()
             return;
+        }
+
+        // Time Log Management Functions
+        let timeEntries = [];
+
+        function loadTimeEntries() {
+            if (!currentCaregiver) return [];
+            
+            try {
+                const saved = localStorage.getItem(`timeEntries_${currentCaregiver.id}`);
+                return saved ? JSON.parse(saved) : [];
+            } catch (e) {
+                console.warn('Could not load time entries:', e);
+                return [];
+            }
+        }
+
+        function saveTimeEntries() {
+            if (!currentCaregiver) return;
+            
+            try {
+                localStorage.setItem(`timeEntries_${currentCaregiver.id}`, JSON.stringify(timeEntries));
+            } catch (e) {
+                console.warn('Could not save time entries:', e);
+            }
+        }
+
+        function showTimeLogsModal() {
+            if (!currentCaregiver) {
+                showNotification('Please select a caregiver first | 请先选择护工', 'error');
+                return;
+            }
+            
+            timeEntries = loadTimeEntries();
+            document.getElementById('logsCaregiverName').textContent = `(${currentCaregiver.name})`;
+            updateTimeLogsTable();
+            document.getElementById('timeLogsModal').style.display = 'flex';
+        }
+
+        function hideTimeLogsModal() {
+            document.getElementById('timeLogsModal').style.display = 'none';
+            hideAddEntryForm();
+            hideEditEntryModal();
+        }
+
+        function updateTimeLogsTable() {
+            const tbody = document.getElementById('timeLogsTableBody');
+            tbody.innerHTML = '';
+            
+            if (timeEntries.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="6" style="text-align: center; color: #6b7280; padding: 2rem;">
+                            No time entries found | 未找到时间记录<br>
+                            <small>Add your first entry using the button above | 使用上面的按钮添加第一条记录</small>
+                        </td>
+                    </tr>
+                `;
+                document.getElementById('weeklyHours').textContent = '0.0';
+                return;
+            }
+            
+            // Sort entries by date (newest first)
+            const sortedEntries = timeEntries.sort((a, b) => new Date(b.clockIn) - new Date(a.clockIn));
+            
+            let weeklyTotal = 0;
+            const oneWeekAgo = new Date();
+            oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+            
+            sortedEntries.forEach(entry => {
+                const clockIn = new Date(entry.clockIn);
+                const clockOut = new Date(entry.clockOut);
+                const hours = (clockOut - clockIn) / (1000 * 60 * 60);
+                
+                // Add to weekly total if within last 7 days
+                if (clockIn >= oneWeekAgo) {
+                    weeklyTotal += hours;
+                }
+                
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${clockIn.toLocaleDateString()}</td>
+                    <td>${clockIn.toLocaleTimeString()}</td>
+                    <td>${clockOut.toLocaleTimeString()}</td>
+                    <td>${hours.toFixed(1)}h</td>
+                    <td>${entry.notes || '-'}</td>
+                    <td>
+                        <div class="log-actions">
+                            <button class="edit-btn" onclick="editTimeEntry('${entry.id}')">Edit | 编辑</button>
+                            <button class="delete-btn" onclick="deleteTimeEntry('${entry.id}')">Delete | 删除</button>
+                        </div>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+            
+            document.getElementById('weeklyHours').textContent = weeklyTotal.toFixed(1);
+        }
+
+        function showAddEntryForm() {
+            const form = document.getElementById('addEntryForm');
+            form.style.display = 'block';
+            
+            // Set default date to today
+            const today = new Date();
+            document.getElementById('entryDate').value = today.toISOString().split('T')[0];
+            
+            // Set default times (9 AM to 5 PM)
+            const defaultStart = new Date(today);
+            defaultStart.setHours(9, 0, 0, 0);
+            const defaultEnd = new Date(today);
+            defaultEnd.setHours(17, 0, 0, 0);
+            
+            document.getElementById('clockInTime').value = defaultStart.toISOString().slice(0, 16);
+            document.getElementById('clockOutTime').value = defaultEnd.toISOString().slice(0, 16);
+        }
+
+        function hideAddEntryForm() {
+            document.getElementById('addEntryForm').style.display = 'none';
+            // Reset form
+            document.getElementById('entryDate').value = '';
+            document.getElementById('clockInTime').value = '';
+            document.getElementById('clockOutTime').value = '';
+            document.getElementById('entryNotes').value = '';
+        }
+
+        function addManualEntry(event) {
+            event.preventDefault();
+            
+            const clockInTime = new Date(document.getElementById('clockInTime').value);
+            const clockOutTime = new Date(document.getElementById('clockOutTime').value);
+            const notes = document.getElementById('entryNotes').value.trim();
+            
+            // Validation
+            if (clockInTime >= clockOutTime) {
+                showNotification('Clock out time must be after clock in time | 下班时间必须晚于上班时间', 'error');
+                return;
+            }
+            
+            // Check for overlapping entries
+            const hasOverlap = timeEntries.some(entry => {
+                const existingIn = new Date(entry.clockIn);
+                const existingOut = new Date(entry.clockOut);
+                return (clockInTime < existingOut && clockOutTime > existingIn);
+            });
+            
+            if (hasOverlap) {
+                showNotification('Time entry overlaps with existing entry | 时间记录与现有记录重叠', 'error');
+                return;
+            }
+            
+            // Create new entry
+            const newEntry = {
+                id: Date.now().toString(),
+                clockIn: clockInTime.toISOString(),
+                clockOut: clockOutTime.toISOString(),
+                notes: notes,
+                createdAt: new Date().toISOString(),
+                manual: true
+            };
+            
+            timeEntries.push(newEntry);
+            saveTimeEntries();
+            updateTimeLogsTable();
+            hideAddEntryForm();
+            
+            showNotification('Time entry added successfully | 时间记录添加成功', 'success');
+            
+            // Sync to Google Sheets if connected
+            if (googleSheetsConfig.isConnected) {
+                logManualEntryToGoogleSheets(newEntry);
+            }
+        }
+
+        function editTimeEntry(entryId) {
+            const entry = timeEntries.find(e => e.id === entryId);
+            if (!entry) return;
+            
+            const clockIn = new Date(entry.clockIn);
+            const clockOut = new Date(entry.clockOut);
+            
+            // Populate edit form
+            document.getElementById('editEntryId').value = entryId;
+            document.getElementById('editEntryDate').value = clockIn.toISOString().split('T')[0];
+            document.getElementById('editClockInTime').value = clockIn.toISOString().slice(0, 16);
+            document.getElementById('editClockOutTime').value = clockOut.toISOString().slice(0, 16);
+            document.getElementById('editEntryNotes').value = entry.notes || '';
+            
+            document.getElementById('editEntryModal').style.display = 'flex';
+        }
+
+        function hideEditEntryModal() {
+            document.getElementById('editEntryModal').style.display = 'none';
+        }
+
+        function saveEditedEntry(event) {
+            event.preventDefault();
+            
+            const entryId = document.getElementById('editEntryId').value;
+            const clockInTime = new Date(document.getElementById('editClockInTime').value);
+            const clockOutTime = new Date(document.getElementById('editClockOutTime').value);
+            const notes = document.getElementById('editEntryNotes').value.trim();
+            
+            // Validation
+            if (clockInTime >= clockOutTime) {
+                showNotification('Clock out time must be after clock in time | 下班时间必须晚于上班时间', 'error');
+                return;
+            }
+            
+            // Check for overlapping entries (excluding current entry)
+            const hasOverlap = timeEntries.some(entry => {
+                if (entry.id === entryId) return false; // Skip current entry
+                const existingIn = new Date(entry.clockIn);
+                const existingOut = new Date(entry.clockOut);
+                return (clockInTime < existingOut && clockOutTime > existingIn);
+            });
+            
+            if (hasOverlap) {
+                showNotification('Time entry overlaps with existing entry | 时间记录与现有记录重叠', 'error');
+                return;
+            }
+            
+            // Update entry
+            const entryIndex = timeEntries.findIndex(e => e.id === entryId);
+            if (entryIndex !== -1) {
+                timeEntries[entryIndex] = {
+                    ...timeEntries[entryIndex],
+                    clockIn: clockInTime.toISOString(),
+                    clockOut: clockOutTime.toISOString(),
+                    notes: notes,
+                    lastModified: new Date().toISOString()
+                };
+                
+                saveTimeEntries();
+                updateTimeLogsTable();
+                hideEditEntryModal();
+                
+                showNotification('Time entry updated successfully | 时间记录更新成功', 'success');
+                
+                // Sync to Google Sheets if connected
+                if (googleSheetsConfig.isConnected) {
+                    logManualEntryToGoogleSheets(timeEntries[entryIndex]);
+                }
+            }
+        }
+
+        function deleteTimeEntry(entryId) {
+            if (!confirm('Are you sure you want to delete this time entry? | 确定要删除这条时间记录吗？')) {
+                return;
+            }
+            
+            timeEntries = timeEntries.filter(entry => entry.id !== entryId);
+            saveTimeEntries();
+            updateTimeLogsTable();
+            
+            showNotification('Time entry deleted successfully | 时间记录删除成功', 'success');
+        }
+
+        async function logManualEntryToGoogleSheets(entry) {
+            try {
+                const clockIn = new Date(entry.clockIn);
+                const clockOut = new Date(entry.clockOut);
+                const hours = (clockOut - clockIn) / (1000 * 60 * 60);
+                
+                await logToGoogleSheets('MANUAL_ENTRY', {
+                    action: 'Manual Entry',
+                    timestamp: entry.createdAt,
+                    caregiver: currentCaregiver.chineseName ? 
+                        `${currentCaregiver.name} | ${currentCaregiver.chineseName}` : 
+                        currentCaregiver.name,
+                    sessionHours: hours.toFixed(2),
+                    totalHours: '', // We don't track total for manual entries
+                    clockInTime: clockIn.toISOString(),
+                    clockOutTime: clockOut.toISOString(),
+                    notes: entry.notes || 'Manual entry'
+                });
+            } catch (error) {
+                console.warn('Failed to sync manual entry to Google Sheets:', error);
+            }
+        }
+
+        // Enhance the existing clock functions to also save to time entries
+        const originalClockOut = clockOut;
+        async function clockOut() {
+            if (!isClocked || !startTime || !currentCaregiver) return;
+            
+            const endTime = new Date();
+            
+            // Save to time entries
+            const timeEntry = {
+                id: Date.now().toString(),
+                clockIn: startTime.toISOString(),
+                clockOut: endTime.toISOString(),
+                notes: 'Automatic entry',
+                createdAt: new Date().toISOString(),
+                manual: false
+            };
+            
+            timeEntries = loadTimeEntries();
+            timeEntries.push(timeEntry);
+            saveTimeEntries();
+            
+            // Call original clock out function
+            await originalClockOut();
         }
 
         // Start the app
