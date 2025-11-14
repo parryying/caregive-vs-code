@@ -1,0 +1,1011 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#7c3aed">
+    <title>Caregiver Time Tracker | 护工时间追踪</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* Simple inline CSS version */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #7c3aed 0%, #3b82f6 100%);
+            min-height: 100vh;
+            color: #334155;
+            line-height: 1.6;
+        }
+        
+        .loading-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #7c3aed 0%, #3b82f6 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10000;
+            color: white;
+        }
+        
+        .loading-screen.hide {
+            display: none;
+        }
+        
+        .app-container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 1.5rem;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        
+        .app-container.loaded {
+            opacity: 1;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 2rem;
+            color: white;
+        }
+        
+        .title {
+            font-size: 1.875rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+        
+        .subtitle {
+            font-size: 1.25rem;
+            opacity: 0.9;
+        }
+        
+        .caregiver-card {
+            background: linear-gradient(145deg, #ffffff 0%, #f8fafc 100%);
+            border-radius: 1rem;
+            padding: 2rem;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+            text-align: center;
+        }
+        
+        .caregiver-name {
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            color: #334155;
+        }
+        
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0.5rem 1.5rem;
+            border-radius: 0.75rem;
+            background: #fca5a5;
+            color: #dc2626;
+            font-weight: 500;
+            margin-bottom: 1.5rem;
+        }
+        
+        .status-badge.clocked-in {
+            background: #dcfce7;
+            color: #16a34a;
+        }
+        
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem 1.5rem;
+            border: none;
+            border-radius: 0.5rem;
+            font-size: 1rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.15s;
+            margin: 0.5rem;
+            min-height: 44px;
+        }
+        
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        
+        .btn-success {
+            background: #10b981;
+            color: white;
+        }
+        
+        .btn-danger {
+            background: #ef4444;
+            color: white;
+        }
+        
+        .btn:not(:disabled):hover {
+            transform: translateY(-1px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        }
+        
+        .time-display {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+            margin: 1.5rem 0;
+            padding: 1.5rem;
+            background: rgba(59, 130, 246, 0.1);
+            border-radius: 0.75rem;
+        }
+        
+        .time-stat {
+            text-align: center;
+        }
+        
+        .time-value {
+            font-size: 1.875rem;
+            font-weight: 700;
+            color: #3b82f6;
+            margin-bottom: 0.5rem;
+        }
+        
+        .time-label {
+            font-size: 0.875rem;
+            color: #64748b;
+        }
+        
+        .live-timer {
+            margin: 1rem 0;
+            padding: 1rem;
+            background: linear-gradient(135deg, #10b981, #059669);
+            border-radius: 0.75rem;
+            color: white;
+            display: none;
+        }
+        
+        .timer-display {
+            font-size: 1.875rem;
+            font-weight: 700;
+            font-family: 'Courier New', monospace;
+            text-align: center;
+        }
+        
+        @media (max-width: 768px) {
+            .app-container {
+                padding: 1rem;
+            }
+            
+            .time-display {
+                grid-template-columns: 1fr;
+                text-align: center;
+            }
+        }
+        
+        /* Modal Styles */
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+        
+        .modal-content {
+            background: white;
+            border-radius: 0.5rem;
+            max-width: 500px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+        
+        .modal-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 1rem;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        
+        .modal-body {
+            padding: 1rem;
+        }
+        
+        .close-btn {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: #6b7280;
+        }
+        
+        .close-btn:hover {
+            color: #374151;
+        }
+        
+        .setup-instructions {
+            margin-bottom: 1.5rem;
+            font-size: 0.875rem;
+        }
+        
+        .setup-instructions h4 {
+            margin-bottom: 0.5rem;
+            color: #374151;
+        }
+        
+        .setup-instructions p {
+            margin-bottom: 0.25rem;
+            color: #6b7280;
+        }
+        
+        .setup-instructions a {
+            color: #3b82f6;
+            text-decoration: none;
+        }
+    </style>
+</head>
+<body>
+    <!-- Loading Screen -->
+    <div id="loadingScreen" class="loading-screen">
+        <div>
+            <div style="width: 40px; height: 40px; border: 3px solid rgba(255, 255, 255, 0.3); border-radius: 50%; border-top-color: white; animation: spin 1s ease-in-out infinite; margin: 0 auto 1rem;"></div>
+            <p>Loading Caregiver Tracker...</p>
+        </div>
+    </div>
+
+    <!-- Main App -->
+    <div id="app" class="app-container">
+        <!-- Header -->
+        <header class="header">
+            <h1 class="title">Caregiver Time Tracker<br><span class="subtitle">护工时间追踪</span></h1>
+            <p>Family Dashboard | 家庭管理面板</p>
+            <div id="currentTime">Loading...</div>
+        </header>
+
+        <!-- Main Card -->
+        <div class="caregiver-card">
+            <h2 class="caregiver-name">Maria Chen | 陈玛丽亚</h2>
+            <div id="statusBadge" class="status-badge">
+                <span id="statusText">Clocked Out | 已下班</span>
+            </div>
+
+            <!-- Clock Controls -->
+            <div>
+                <button class="btn btn-success" id="clockInBtn" onclick="clockIn()">
+                    <span>Clock In<br><small>上班打卡</small></span>
+                </button>
+                <button class="btn btn-danger" id="clockOutBtn" onclick="clockOut()" disabled>
+                    <span>Clock Out<br><small>下班打卡</small></span>
+                </button>
+            </div>
+
+            <!-- Live Timer -->
+            <div class="live-timer" id="liveTimer">
+                <div>Current Session | 当前工作时间</div>
+                <div class="timer-display" id="currentSessionTime">00:00:00</div>
+            </div>
+
+            <!-- Time Display -->
+            <div class="time-display">
+                <div class="time-stat">
+                    <div class="time-value" id="hoursWorked">0.0</div>
+                    <div class="time-label">
+                        <span>Hours Worked</span><br>
+                        <span style="font-size: 0.75rem;">已工作小时</span>
+                    </div>
+                </div>
+                <div class="time-stat">
+                    <div class="time-value" id="hoursRemaining">160.0</div>
+                    <div class="time-label">
+                        <span>Hours Remaining</span><br>
+                        <span style="font-size: 0.75rem;">剩余小时</span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Google Sheets Setup Button -->
+            <div style="margin-top: 1rem;">
+                <button class="btn" id="setupSheetsBtn" onclick="showGoogleSheetsSetup()" 
+                        style="background: #f59e0b; color: white; font-size: 0.875rem;">
+                    Setup Google Sheets | 设置谷歌表格
+                </button>
+                <div id="syncStatus" style="margin-top: 0.5rem; font-size: 0.875rem;">
+                    <span id="syncIndicator" style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #ef4444; margin-right: 0.5rem;"></span>
+                    <span id="syncText">Not Connected</span>
+                    <button id="retryBtn" onclick="retryFailedSyncs()" style="display: none; margin-left: 0.5rem; padding: 0.25rem 0.5rem; font-size: 0.75rem; background: #3b82f6; color: white; border: none; border-radius: 0.25rem; cursor: pointer;">
+                        Retry | 重试
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Google Sheets Setup Modal -->
+    <div id="googleSheetsModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Google Sheets Setup | 谷歌表格设置</h3>
+                <button class="close-btn" onclick="hideGoogleSheetsSetup()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="setup-instructions">
+                    <h4>📋 Simple Setup (Recommended)</h4>
+                    <p><strong>Step 1:</strong> Create Google Apps Script</p>
+                    <p>1. Go to <a href="https://script.google.com" target="_blank">script.google.com</a></p>
+                    <p>2. Click "New Project"</p>
+                    <p>3. Replace default code with the script below</p>
+                    <p>4. Click "Deploy" → "New deployment" → "Web app"</p>
+                    <p>5. Set "Execute as: Me" and "Access: Anyone"</p>
+                    <p>6. Copy the Web App URL</p>
+                    
+                    <div style="background: #f3f4f6; padding: 1rem; margin: 0.5rem 0; border-radius: 0.25rem; font-family: monospace; font-size: 0.75rem;">
+function doPost(e) {<br>
+&nbsp;&nbsp;try {<br>
+&nbsp;&nbsp;&nbsp;&nbsp;const sheet = SpreadsheetApp.openById('YOUR_SHEET_ID_HERE');<br>
+&nbsp;&nbsp;&nbsp;&nbsp;const ws = sheet.getActiveSheet();<br>
+&nbsp;&nbsp;&nbsp;&nbsp;const data = JSON.parse(e.postData.contents);<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;// Add headers if first row<br>
+&nbsp;&nbsp;&nbsp;&nbsp;if (ws.getLastRow() === 0) {<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ws.getRange(1, 1, 1, 8).setValues([['Timestamp', 'Caregiver', 'Date', 'Clock In', 'Clock Out', 'Session Hours', 'Total Hours', 'Action']]);<br>
+&nbsp;&nbsp;&nbsp;&nbsp;}<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;ws.appendRow(data.values[0]);<br>
+&nbsp;&nbsp;&nbsp;&nbsp;return ContentService.createTextOutput(JSON.stringify({success: true})).setMimeType(ContentService.MimeType.JSON);<br>
+&nbsp;&nbsp;} catch (error) {<br>
+&nbsp;&nbsp;&nbsp;&nbsp;return ContentService.createTextOutput(JSON.stringify({success: false, error: error.toString()})).setMimeType(ContentService.MimeType.JSON);<br>
+&nbsp;&nbsp;}<br>
+}
+                    </div>
+                    
+                    <p><strong>Step 2:</strong> Update the script with your Sheet ID</p>
+                    <p><strong>Step 3:</strong> Enter the Web App URL below</p>
+                </div>
+                
+                <form id="googleSheetsForm" onsubmit="testGoogleSheets(event)">
+                    <div style="margin: 1rem 0;">
+                        <label style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Google Apps Script Web App URL:</label>
+                        <input type="url" id="webAppUrl" placeholder="https://script.google.com/macros/s/.../exec" style="width: 100%; padding: 0.5rem; border: 1px solid #ccc; border-radius: 0.25rem;" required>
+                    </div>
+                    <div style="margin: 1rem 0;">
+                        <label style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Spreadsheet ID (for reference):</label>
+                        <input type="text" id="spreadsheetId" placeholder="Found in Google Sheet URL" style="width: 100%; padding: 0.5rem; border: 1px solid #ccc; border-radius: 0.25rem;" required>
+                    </div>
+                    <button type="submit" class="btn" style="background: #3b82f6; color: white;">Test Connection | 测试连接</button>
+                </form>
+                
+                <div id="connectionStatus" style="margin-top: 1rem; padding: 0.5rem; border-radius: 0.25rem; display: none;"></div>
+            </div>
+        </div>
+    </div>
+
+    <style>
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+
+    <script>
+        // App state
+        let isClocked = false;
+        let startTime = null;
+        let timerInterval = null;
+        let hoursWorked = 0;
+        
+        // Google Sheets integration
+        let googleSheetsConfig = {
+            webAppUrl: null,
+            spreadsheetId: null,
+            isConnected: false
+        };
+
+        // Initialize app
+        function initApp() {
+            console.log('Initializing caregiver app with Google Sheets...');
+            
+            // Hide loading screen
+            setTimeout(() => {
+                document.getElementById('loadingScreen').classList.add('hide');
+                document.getElementById('app').classList.add('loaded');
+            }, 1000);
+            
+            // Start clock
+            updateCurrentTime();
+            setInterval(updateCurrentTime, 1000);
+            
+            // Load saved data
+            loadData();
+            loadGoogleSheetsConfig();
+            
+            console.log('App initialized successfully!');
+        }
+
+        function updateCurrentTime() {
+            const now = new Date();
+            const options = {
+                weekday: 'long',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            };
+            document.getElementById('currentTime').textContent = 
+                now.toLocaleDateString('en-US', options);
+        }
+
+        async function clockIn() {
+            if (isClocked) return;
+            
+            isClocked = true;
+            startTime = new Date();
+            
+            // Update UI
+            document.getElementById('statusBadge').className = 'status-badge clocked-in';
+            document.getElementById('statusText').textContent = 'Clocked In | 已上班';
+            document.getElementById('clockInBtn').disabled = true;
+            document.getElementById('clockOutBtn').disabled = false;
+            document.getElementById('liveTimer').style.display = 'block';
+            
+            // Start timer
+            timerInterval = setInterval(updateLiveTimer, 1000);
+            
+            // Log to Google Sheets
+            await logToGoogleSheets('CLOCK_IN', {
+                action: 'Clock In',
+                timestamp: startTime.toISOString(),
+                caregiver: 'Maria Chen | 陈玛丽亚'
+            });
+            
+            // Save state
+            saveData();
+            
+            console.log('Clocked in at:', startTime);
+            showNotification('Clocked in successfully! | 上班打卡成功！', 'success');
+        }
+
+        async function clockOut() {
+            if (!isClocked || !startTime) return;
+            
+            const endTime = new Date();
+            const sessionHours = (endTime - startTime) / (1000 * 60 * 60);
+            
+            isClocked = false;
+            clearInterval(timerInterval);
+            
+            // Update UI
+            document.getElementById('statusBadge').className = 'status-badge';
+            document.getElementById('statusText').textContent = 'Clocked Out | 已下班';
+            document.getElementById('clockInBtn').disabled = false;
+            document.getElementById('clockOutBtn').disabled = true;
+            document.getElementById('liveTimer').style.display = 'none';
+            
+            // Update hours
+            hoursWorked += sessionHours;
+            updateTimeDisplay();
+            
+            // Log to Google Sheets
+            await logToGoogleSheets('CLOCK_OUT', {
+                action: 'Clock Out',
+                timestamp: endTime.toISOString(),
+                caregiver: 'Maria Chen | 陈玛丽亚',
+                sessionHours: sessionHours.toFixed(2),
+                totalHours: hoursWorked.toFixed(2)
+            });
+            
+            // Save state
+            saveData();
+            
+            showNotification(`Session completed! Worked: ${sessionHours.toFixed(1)} hours`, 'success');
+            
+            console.log('Clocked out. Session hours:', sessionHours.toFixed(2));
+        }
+
+        function updateLiveTimer() {
+            if (!startTime) return;
+            
+            const now = new Date();
+            const elapsed = now - startTime;
+            const hours = Math.floor(elapsed / (1000 * 60 * 60));
+            const minutes = Math.floor((elapsed % (1000 * 60 * 60)) / (1000 * 60));
+            const seconds = Math.floor((elapsed % (1000 * 60)) / 1000);
+            
+            document.getElementById('currentSessionTime').textContent = 
+                `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        }
+
+        function updateTimeDisplay() {
+            document.getElementById('hoursWorked').textContent = hoursWorked.toFixed(1);
+            document.getElementById('hoursRemaining').textContent = Math.max(0, 160 - hoursWorked).toFixed(1);
+        }
+
+        // Google Sheets Integration Functions
+        
+        function loadGoogleSheetsConfig() {
+            try {
+                const saved = localStorage.getItem('googleSheetsConfig');
+                if (saved) {
+                    googleSheetsConfig = JSON.parse(saved);
+                    updateSyncStatus();
+                }
+            } catch (e) {
+                console.warn('Could not load Google Sheets config:', e);
+            }
+        }
+
+        function saveGoogleSheetsConfig() {
+            try {
+                localStorage.setItem('googleSheetsConfig', JSON.stringify(googleSheetsConfig));
+            } catch (e) {
+                console.warn('Could not save Google Sheets config:', e);
+            }
+        }
+
+        function updateSyncStatus() {
+            const indicator = document.getElementById('syncIndicator');
+            const text = document.getElementById('syncText');
+            const retryBtn = document.getElementById('retryBtn');
+            
+            if (googleSheetsConfig.isConnected) {
+                indicator.style.background = '#10b981';
+                text.textContent = 'Connected | 已连接';
+                retryBtn.style.display = 'none';
+            } else {
+                indicator.style.background = '#ef4444';
+                text.textContent = 'Not Connected | 未连接';
+                retryBtn.style.display = 'none';
+            }
+        }
+        
+        // Show retry button when there are failed syncs
+        function showRetryButton() {
+            const retryBtn = document.getElementById('retryBtn');
+            const retryQueue = JSON.parse(localStorage.getItem('retryQueue') || '[]');
+            
+            if (retryQueue.length > 0 && googleSheetsConfig.isConnected) {
+                retryBtn.style.display = 'inline-block';
+            } else {
+                retryBtn.style.display = 'none';
+            }
+        }
+        
+        // Manual retry function
+        async function retryFailedSyncs() {
+            const retryQueue = JSON.parse(localStorage.getItem('retryQueue') || '[]');
+            
+            if (retryQueue.length === 0) {
+                showNotification('No failed syncs to retry | 没有失败的同步需要重试', 'info');
+                return;
+            }
+            
+            showNotification(`Retrying ${retryQueue.length} failed syncs... | 重试${retryQueue.length}个失败的同步...`, 'info');
+            
+            const successfulRetries = [];
+            
+            for (const item of retryQueue) {
+                try {
+                    await logToGoogleSheets(item.eventType, item.data);
+                    successfulRetries.push(item);
+                } catch (error) {
+                    console.error('Retry failed:', error);
+                }
+                
+                // Small delay between retries
+                await new Promise(resolve => setTimeout(resolve, 500));
+            }
+            
+            // Remove successful retries from queue
+            const remainingQueue = retryQueue.filter(item => !successfulRetries.includes(item));
+            localStorage.setItem('retryQueue', JSON.stringify(remainingQueue));
+            
+            showNotification(`Retried ${successfulRetries.length}/${retryQueue.length} syncs successfully | 成功重试${successfulRetries.length}/${retryQueue.length}个同步`, 'success');
+            
+            showRetryButton();
+        }
+
+        async function logToGoogleSheets(eventType, data) {
+            if (!googleSheetsConfig.isConnected) {
+                console.log('Google Sheets not connected, skipping sync');
+                return;
+            }
+
+            try {
+                console.log('Starting Google Sheets sync...', { eventType, data });
+                
+                // Update sync status to show syncing
+                document.getElementById('syncIndicator').style.background = '#f59e0b';
+                document.getElementById('syncText').textContent = 'Syncing... | 同步中...';
+
+                const row = [
+                    new Date().toISOString(), // Timestamp
+                    data.caregiver, // Caregiver Name
+                    new Date().toLocaleDateString(), // Date
+                    eventType === 'CLOCK_IN' ? new Date(data.timestamp).toLocaleTimeString() : '', // Clock In
+                    eventType === 'CLOCK_OUT' ? new Date(data.timestamp).toLocaleTimeString() : '', // Clock Out
+                    data.sessionHours || '', // Session Hours
+                    data.totalHours || '', // Total Hours
+                    data.action // Action/Notes
+                ];
+
+                console.log('Preparing to send row:', row);
+                
+                const response = await appendToGoogleSheet(row);
+                console.log('Google Sheets response:', response);
+                
+                if (response.success) {
+                    console.log('Sync successful!');
+                    // Update sync status to success
+                    setTimeout(() => {
+                        document.getElementById('syncIndicator').style.background = '#10b981';
+                        document.getElementById('syncText').textContent = 'Synced | 已同步';
+                    }, 1000);
+                    
+                    showNotification('Data synced to Google Sheets successfully! | 数据已成功同步到谷歌表格！', 'success');
+                } else {
+                    throw new Error(response.error || 'Unknown sync error');
+                }
+
+            } catch (error) {
+                console.error('Error syncing to Google Sheets:', error);
+                
+                // Update sync status to error with more details
+                document.getElementById('syncIndicator').style.background = '#ef4444';
+                
+                let errorText = 'Sync Error';
+                if (error.message.includes('403')) {
+                    errorText = 'Permission Error';
+                } else if (error.message.includes('404')) {
+                    errorText = 'Sheet Not Found';
+                } else if (error.message.includes('400')) {
+                    errorText = 'Invalid Request';
+                } else if (error.message.includes('Failed to fetch')) {
+                    errorText = 'Network Error';
+                }
+                
+                document.getElementById('syncText').textContent = `${errorText} | 同步错误`;
+                
+                // Show detailed error notification
+                showNotification(`Sync failed: ${error.message}. Data saved locally for retry. | 同步失败：${error.message}。数据已本地保存以供重试。`, 'error');
+                
+                // Store for retry later
+                storeForRetry(eventType, data);
+                showRetryButton();
+            }
+        }
+
+        async function appendToGoogleSheet(row) {
+            const url = googleSheetsConfig.webAppUrl;
+            
+            console.log('Sending request to Google Apps Script:', url);
+            console.log('Request data:', { values: [row] });
+            
+            try {
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        values: [row]
+                    })
+                });
+
+                console.log('Response status:', response.status);
+                console.log('Response statusText:', response.statusText);
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const result = await response.json();
+                console.log('Success response:', result);
+                
+                if (result.success) {
+                    return { success: true, data: result };
+                } else {
+                    throw new Error(result.error || 'Unknown error from Apps Script');
+                }
+                
+            } catch (error) {
+                console.error('Fetch error:', error);
+                return { success: false, error: error.message };
+            }
+        }
+
+        function storeForRetry(eventType, data) {
+            try {
+                const retryData = JSON.parse(localStorage.getItem('retryQueue') || '[]');
+                retryData.push({ eventType, data, timestamp: new Date().toISOString() });
+                localStorage.setItem('retryQueue', JSON.stringify(retryData));
+            } catch (e) {
+                console.warn('Could not store retry data:', e);
+            }
+        }
+
+        // Google Sheets Setup Modal Functions
+        
+        function showGoogleSheetsSetup() {
+            document.getElementById('googleSheetsModal').style.display = 'flex';
+        }
+
+        function hideGoogleSheetsSetup() {
+            document.getElementById('googleSheetsModal').style.display = 'none';
+        }
+
+        async function testGoogleSheets(event) {
+            event.preventDefault();
+            
+            const webAppUrl = document.getElementById('webAppUrl').value.trim();
+            const spreadsheetId = document.getElementById('spreadsheetId').value.trim();
+            const statusDiv = document.getElementById('connectionStatus');
+            
+            if (!webAppUrl || !spreadsheetId) {
+                showConnectionStatus('Please fill in all fields | 请填写所有字段', 'error');
+                return;
+            }
+
+            showConnectionStatus('Testing connection... | 测试连接中...', 'info');
+
+            try {
+                console.log('Testing Google Apps Script URL:', webAppUrl);
+                
+                // First, try a simple GET request to test basic connectivity
+                console.log('Step 1: Testing basic connectivity with GET request...');
+                const getResponse = await fetch(webAppUrl, {
+                    method: 'GET',
+                    mode: 'cors'
+                });
+                
+                console.log('GET Response status:', getResponse.status);
+                console.log('GET Response headers:', Object.fromEntries(getResponse.headers.entries()));
+                
+                if (!getResponse.ok) {
+                    const errorText = await getResponse.text();
+                    console.log('GET Response error text:', errorText);
+                    throw new Error(`GET test failed - HTTP ${getResponse.status}: ${getResponse.statusText}`);
+                }
+                
+                const getResult = await getResponse.json();
+                console.log('GET Response JSON:', getResult);
+                
+                // Now try the POST request
+                console.log('Step 2: Testing POST request...');
+                const testResponse = await fetch(webAppUrl, {
+                    method: 'POST',
+                    mode: 'cors',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        values: [['Test', 'Connection', new Date().toISOString(), '', '', '', '', 'Test']]
+                    })
+                });
+
+                console.log('POST Response status:', testResponse.status);
+                console.log('POST Response headers:', Object.fromEntries(testResponse.headers.entries()));
+
+                if (!testResponse.ok) {
+                    const errorText = await testResponse.text();
+                    console.log('POST Response error text:', errorText);
+                    throw new Error(`POST test failed - HTTP ${testResponse.status}: ${testResponse.statusText}`);
+                }
+
+                const result = await testResponse.json();
+                console.log('POST Response JSON:', result);
+                
+                if (!result.success) {
+                    throw new Error(result.error || 'Unknown error from Apps Script');
+                }
+
+                // Save configuration
+                googleSheetsConfig = {
+                    webAppUrl,
+                    spreadsheetId,
+                    isConnected: true
+                };
+                saveGoogleSheetsConfig();
+                updateSyncStatus();
+
+                showConnectionStatus('✅ Connection successful! Data will now sync automatically. | ✅ 连接成功！数据将自动同步。', 'success');
+                
+                setTimeout(() => {
+                    hideGoogleSheetsSetup();
+                }, 2000);
+
+            } catch (error) {
+                console.error('Detailed connection test error:', error);
+                console.error('Error stack:', error.stack);
+                
+                let errorMessage = '';
+                
+                if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError') || error.name === 'TypeError') {
+                    errorMessage = `❌ Network Error: Cannot reach Google Apps Script.
+
+🔧 Possible Issues:
+1. **Internet Connection**: Check your internet connection
+2. **Firewall/Antivirus**: Temporarily disable firewall or antivirus
+3. **Browser**: Try a different browser or incognito mode
+4. **VPN**: Disable VPN if you're using one
+
+🧪 **Manual Test**: 
+Open this URL in a new tab: ${webAppUrl}
+You should see a JSON response like: {"success":true,"message":"Google Apps Script is working!"}
+
+❌ 网络错误：无法访问谷歌应用脚本。
+
+🔧 详细错误: ${error.message}`;
+                } else if (error.message.includes('GET test failed')) {
+                    errorMessage = `❌ Google Apps Script URL Error
+
+The URL doesn't respond to basic requests. This usually means:
+
+1. **Wrong URL**: Double-check you copied the deployment URL correctly
+2. **Not Deployed**: Make sure the script is deployed as a Web App
+3. **Permissions**: Ensure "Who has access" is set to "Anyone"
+
+🧪 **Try this**: 
+- Go to your Google Apps Script
+- Click "Deploy" → "Manage deployments"
+- Verify settings and get a fresh URL
+
+❌ 应用脚本URL错误`;
+                } else if (error.message.includes('POST test failed')) {
+                    errorMessage = `❌ Apps Script Configuration Error
+
+Basic connectivity works but POST requests fail. Check:
+
+1. **Function Name**: Ensure your script has both doGet() and doPost() functions
+2. **Permissions**: Re-authorize the script permissions
+3. **Spreadsheet Access**: Verify the script can access your Google Sheet
+
+❌ 应用脚本配置错误`;
+                } else if (error.message.includes('404')) {
+                    errorMessage = `❌ URL Not Found: Web App URL is incorrect.
+
+🔧 Make sure:
+- You copied the correct deployment URL (should end with /exec)
+- The script is deployed as a Web app
+- Try creating a new deployment
+
+❌ 找不到URL：Web应用URL不正确。`;
+                } else {
+                    errorMessage = `❌ Connection failed: ${error.message}
+
+🔧 Debug Info:
+- Web App URL: ${webAppUrl}
+- Error Type: ${error.name}
+- Browser Console: Press F12 and check the Console tab for more details
+
+❌ 连接失败：${error.message}`;
+                }
+                
+                showConnectionStatus(errorMessage, 'error');
+                googleSheetsConfig.isConnected = false;
+                updateSyncStatus();
+            }
+        }
+
+        async function initializeGoogleSheet(apiKey, spreadsheetId) {
+            // Check if headers exist
+            const readUrl = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/A1:H1?key=${apiKey}`;
+            const readResponse = await fetch(readUrl);
+            const data = await readResponse.json();
+
+            // If no data or empty, add headers
+            if (!data.values || data.values.length === 0) {
+                const headers = ['Timestamp', 'Caregiver', 'Date', 'Clock In', 'Clock Out', 'Session Hours', 'Total Hours', 'Action'];
+                const writeUrl = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/A1:H1?key=${apiKey}&valueInputOption=USER_ENTERED`;
+                
+                await fetch(writeUrl, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        values: [headers]
+                    })
+                });
+            }
+        }
+
+        function showConnectionStatus(message, type) {
+            const statusDiv = document.getElementById('connectionStatus');
+            statusDiv.style.display = 'block';
+            statusDiv.textContent = message;
+            statusDiv.className = `connection-status ${type}`;
+            
+            const colors = {
+                success: { bg: '#dcfce7', color: '#166534' },
+                error: { bg: '#fecaca', color: '#dc2626' },
+                info: { bg: '#dbeafe', color: '#1d4ed8' }
+            };
+            
+            const style = colors[type] || colors.info;
+            statusDiv.style.background = style.bg;
+            statusDiv.style.color = style.color;
+        }
+
+        // Notification System
+        function showNotification(message, type = 'info') {
+            // Simple notification - you could enhance this
+            console.log(`[${type.toUpperCase()}] ${message}`);
+            
+            // You could add a toast notification here
+            const notification = document.createElement('div');
+            notification.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                background: ${type === 'success' ? '#10b981' : '#ef4444'};
+                color: white;
+                padding: 1rem;
+                border-radius: 0.5rem;
+                z-index: 1001;
+                max-width: 300px;
+                box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            `;
+            notification.textContent = message;
+            
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                if (notification.parentNode) {
+                    notification.parentNode.removeChild(notification);
+                }
+            }, 3000);
+        }
+
+        // Data persistence functions
+        function saveData() {
+            try {
+                const data = {
+                    hoursWorked,
+                    isClocked,
+                    startTime: startTime ? startTime.toISOString() : null
+                };
+                localStorage.setItem('caregiverData', JSON.stringify(data));
+            } catch (e) {
+                console.warn('Could not save data to localStorage:', e);
+            }
+        }
+
+        function loadData() {
+            try {
+                const saved = localStorage.getItem('caregiverData');
+                if (saved) {
+                    const data = JSON.parse(saved);
+                    hoursWorked = data.hoursWorked || 0;
+                    updateTimeDisplay();
+                    
+                    if (data.isClocked && data.startTime) {
+                        startTime = new Date(data.startTime);
+                        clockIn();
+                    }
+                }
+            } catch (e) {
+                console.warn('Could not load saved data:', e);
+            }
+        }
+
+        // Start the app
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initApp);
+        } else {
+            initApp();
+        }
+    </script>
+</body>
+</html>

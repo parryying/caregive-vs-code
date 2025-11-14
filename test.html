@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple Test - Caregiver Tracker</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #7c3aed 0%, #3b82f6 100%);
+            color: white;
+            padding: 20px;
+            min-height: 100vh;
+            margin: 0;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            text-align: center;
+        }
+        .card {
+            background: white;
+            color: #333;
+            padding: 30px;
+            border-radius: 15px;
+            margin: 20px 0;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+        }
+        button {
+            background: #10b981;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 8px;
+            font-size: 16px;
+            margin: 10px;
+            cursor: pointer;
+        }
+        button:hover {
+            background: #059669;
+        }
+        button:disabled {
+            background: #ef4444;
+            cursor: not-allowed;
+        }
+        .status {
+            padding: 10px 20px;
+            border-radius: 20px;
+            display: inline-block;
+            margin: 10px 0;
+        }
+        .status.out {
+            background: #fca5a5;
+            color: #dc2626;
+        }
+        .status.in {
+            background: #dcfce7;
+            color: #16a34a;
+        }
+        .time-display {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin: 20px 0;
+        }
+        .time-stat {
+            text-align: center;
+        }
+        .time-value {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #3b82f6;
+        }
+        .live-timer {
+            background: #10b981;
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+            display: none;
+        }
+        .timer-display {
+            font-size: 2rem;
+            font-family: monospace;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Caregiver Time Tracker<br><span style="font-size: 0.7em;">护工时间追踪</span></h1>
+        <p>Family Dashboard | 家庭管理面板</p>
+        <p id="currentTime">Loading time...</p>
+
+        <div class="card">
+            <h2>Maria Chen | 陈玛丽亚</h2>
+            <div id="status" class="status out">Clocked Out | 已下班</div>
+            
+            <div>
+                <button id="clockInBtn" onclick="clockIn()">
+                    Clock In<br><small>上班打卡</small>
+                </button>
+                <button id="clockOutBtn" onclick="clockOut()" disabled>
+                    Clock Out<br><small>下班打卡</small>
+                </button>
+            </div>
+            
+            <div id="liveTimer" class="live-timer">
+                <div>Current Session | 当前工作时间</div>
+                <div class="timer-display" id="timerDisplay">00:00:00</div>
+            </div>
+            
+            <div class="time-display">
+                <div class="time-stat">
+                    <div class="time-value" id="hoursWorked">0.0</div>
+                    <div>Hours Worked<br><small>已工作小时</small></div>
+                </div>
+                <div class="time-stat">
+                    <div class="time-value" id="hoursRemaining">160.0</div>
+                    <div>Hours Remaining<br><small>剩余小时</small></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let isClocked = false;
+        let startTime = null;
+        let timerInterval = null;
+
+        function updateCurrentTime() {
+            const now = new Date();
+            const options = {
+                weekday: 'long',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            };
+            document.getElementById('currentTime').textContent = now.toLocaleDateString('en-US', options);
+        }
+
+        function clockIn() {
+            isClocked = true;
+            startTime = new Date();
+            
+            document.getElementById('status').textContent = 'Clocked In | 已上班';
+            document.getElementById('status').className = 'status in';
+            document.getElementById('clockInBtn').disabled = true;
+            document.getElementById('clockOutBtn').disabled = false;
+            document.getElementById('liveTimer').style.display = 'block';
+            
+            // Start timer
+            timerInterval = setInterval(updateTimer, 1000);
+            
+            console.log('Clocked in at:', startTime);
+        }
+
+        function clockOut() {
+            if (!isClocked || !startTime) return;
+            
+            const endTime = new Date();
+            const totalMinutes = (endTime - startTime) / (1000 * 60);
+            const totalHours = (totalMinutes / 60).toFixed(1);
+            
+            isClocked = false;
+            clearInterval(timerInterval);
+            
+            document.getElementById('status').textContent = 'Clocked Out | 已下班';
+            document.getElementById('status').className = 'status out';
+            document.getElementById('clockInBtn').disabled = false;
+            document.getElementById('clockOutBtn').disabled = true;
+            document.getElementById('liveTimer').style.display = 'none';
+            
+            // Update hours worked
+            const current = parseFloat(document.getElementById('hoursWorked').textContent);
+            const newTotal = current + parseFloat(totalHours);
+            document.getElementById('hoursWorked').textContent = newTotal.toFixed(1);
+            document.getElementById('hoursRemaining').textContent = (160 - newTotal).toFixed(1);
+            
+            alert(`Session completed!\nWorked: ${totalHours} hours\nTotal today: ${newTotal.toFixed(1)} hours`);
+            
+            console.log('Clocked out at:', endTime, 'Total hours:', totalHours);
+        }
+
+        function updateTimer() {
+            if (!startTime) return;
+            
+            const now = new Date();
+            const elapsed = now - startTime;
+            const hours = Math.floor(elapsed / (1000 * 60 * 60));
+            const minutes = Math.floor((elapsed % (1000 * 60 * 60)) / (1000 * 60));
+            const seconds = Math.floor((elapsed % (1000 * 60)) / 1000);
+            
+            document.getElementById('timerDisplay').textContent = 
+                `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        }
+
+        // Initialize
+        updateCurrentTime();
+        setInterval(updateCurrentTime, 1000);
+        
+        console.log('Simple test app loaded successfully!');
+    </script>
+</body>
+</html>

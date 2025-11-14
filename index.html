@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#7c3aed">
+    <title>Caregiver Time Tracker | 护工时间追踪</title>
+    
+    <!-- PWA Meta Tags -->
+    <meta name="description" content="Family Dashboard for tracking caregiver work hours">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="Caregiver Tracker">
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>👩‍⚕️</text></svg>">
+    
+    <!-- Manifest for PWA -->
+    <link rel="manifest" href="manifest.json">
+    
+    <!-- Stylesheets -->
+    <link rel="stylesheet" href="styles.css">
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- Loading Screen -->
+    <div id="loadingScreen" class="loading-screen">
+        <div class="loader">
+            <div class="spinner"></div>
+            <p>Loading Caregiver Tracker...</p>
+        </div>
+    </div>
+
+    <!-- Main App Container -->
+    <div id="app" class="app-container">
+        <!-- Header -->
+        <header class="header">
+            <h1 class="title">Caregiver Time Tracker<br><span class="subtitle">护工时间追踪</span></h1>
+            <p class="dashboard-title">Family Dashboard | 家庭管理面板</p>
+            <div class="current-time" id="currentTime"></div>
+            
+            <!-- Sync Status -->
+            <div class="sync-status" id="syncStatus">
+                <div class="sync-indicator" id="syncIndicator"></div>
+                <span id="syncText">Synced</span>
+            </div>
+        </header>
+
+        <!-- Admin Controls -->
+        <div class="admin-controls">
+            <button class="btn btn-secondary" id="manageCaregivers">
+                <span>Manage Caregivers</span>
+                <span class="btn-text-cn">管理护工</span>
+            </button>
+            <button class="btn btn-secondary" id="generateReport">
+                <span>Generate Report</span>
+                <span class="btn-text-cn">生成报告</span>
+            </button>
+            <button class="btn btn-secondary" id="setupGoogleSheets">
+                <span>Setup Google Sheets</span>
+                <span class="btn-text-cn">设置表格</span>
+            </button>
+        </div>
+
+        <!-- Caregiver Selection -->
+        <div class="caregiver-selector" id="caregiverSelector">
+            <label for="caregiverSelect">Select Caregiver | 选择护工:</label>
+            <select id="caregiverSelect" class="caregiver-select">
+                <option value="maria">Maria Chen | 陈玛丽亚</option>
+            </select>
+            <button class="btn btn-small" id="addCaregiverBtn">+ Add New</button>
+        </div>
+
+        <!-- Main Dashboard -->
+        <main class="main-content">
+            <!-- Caregiver Card -->
+            <div class="caregiver-card" id="caregiverCard">
+                <div class="caregiver-info">
+                    <h2 class="caregiver-name" id="caregiverName">Maria Chen | 陈玛丽亚</h2>
+                    <div class="status-badge" id="statusBadge">
+                        <span class="status-text" id="statusText">Clocked Out | 已下班</span>
+                    </div>
+                </div>
+
+                <!-- Clock Controls -->
+                <div class="clock-controls">
+                    <button class="btn btn-success" id="clockInBtn">
+                        <span>Clock In</span>
+                        <span class="btn-text-cn">上班打卡</span>
+                    </button>
+                    <button class="btn btn-danger" id="clockOutBtn" disabled>
+                        <span>Clock Out</span>
+                        <span class="btn-text-cn">下班打卡</span>
+                    </button>
+                </div>
+
+                <!-- Edit Time Button -->
+                <button class="btn btn-warning" id="editTimeBtn">
+                    <span>Edit Time | 编辑时间</span>
+                </button>
+
+                <!-- Time Display -->
+                <div class="time-display">
+                    <div class="time-stat">
+                        <div class="time-value" id="hoursWorked">0.0</div>
+                        <div class="time-label">
+                            <span>Hours Worked</span>
+                            <span class="label-cn">已工作小时</span>
+                        </div>
+                    </div>
+                    <div class="time-stat">
+                        <div class="time-value" id="hoursRemaining">160.0</div>
+                        <div class="time-label">
+                            <span>Hours Remaining</span>
+                            <span class="label-cn">剩余小时</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Live Timer (when clocked in) -->
+                <div class="live-timer" id="liveTimer" style="display: none;">
+                    <div class="timer-display">
+                        <span id="currentSessionTime">00:00:00</span>
+                        <div class="timer-label">Current Session | 当前工作时间</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- View Time Logs Button -->
+            <button class="btn btn-primary view-logs-btn" id="viewLogsBtn">
+                <span>View Time Logs | 查看时间记录</span>
+            </button>
+        </main>
+    </div>
+
+    <!-- Modals -->
+    <!-- Caregiver Management Modal -->
+    <div class="modal" id="caregiverModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Manage Caregivers | 管理护工</h3>
+                <button class="close-btn" id="closeCaregiverModal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="caregiverForm">
+                    <div class="form-group">
+                        <label for="caregiverNameInput">Name | 姓名:</label>
+                        <input type="text" id="caregiverNameInput" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="caregiverNameCn">Chinese Name | 中文姓名:</label>
+                        <input type="text" id="caregiverNameCn">
+                    </div>
+                    <div class="form-group">
+                        <label for="monthlyHours">Monthly Hours | 月工作时间:</label>
+                        <input type="number" id="monthlyHours" value="160" min="1">
+                    </div>
+                    <button type="submit" class="btn btn-primary">Add Caregiver | 添加护工</button>
+                </form>
+                <div class="caregiver-list" id="caregiverList"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Time Edit Modal -->
+    <div class="modal" id="timeEditModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Edit Time | 编辑时间</h3>
+                <button class="close-btn" id="closeTimeEditModal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="timeEditForm">
+                    <div class="form-group">
+                        <label for="editDate">Date | 日期:</label>
+                        <input type="date" id="editDate" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="editClockIn">Clock In Time | 上班时间:</label>
+                        <input type="time" id="editClockIn" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="editClockOut">Clock Out Time | 下班时间:</label>
+                        <input type="time" id="editClockOut" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="editNotes">Notes | 备注:</label>
+                        <textarea id="editNotes" rows="3"></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Save Changes | 保存修改</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Time Logs Modal -->
+    <div class="modal" id="timeLogsModal">
+        <div class="modal-content modal-large">
+            <div class="modal-header">
+                <h3>Time Logs | 时间记录</h3>
+                <button class="close-btn" id="closeTimeLogsModal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="logs-controls">
+                    <input type="date" id="logDateFrom" class="form-control">
+                    <span>to</span>
+                    <input type="date" id="logDateTo" class="form-control">
+                    <button class="btn btn-small" id="filterLogs">Filter | 筛选</button>
+                    <button class="btn btn-small" id="exportLogs">Export | 导出</button>
+                </div>
+                <div class="logs-container" id="logsContainer">
+                    <!-- Time logs will be populated here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Google Sheets Setup Modal -->
+    <div class="modal" id="googleSheetsModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Google Sheets Setup | 谷歌表格设置</h3>
+                <button class="close-btn" id="closeGoogleSheetsModal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="setup-steps">
+                    <div class="step">
+                        <h4>Step 1: Create Google Sheets API Key</h4>
+                        <p>Visit <a href="https://console.developers.google.com" target="_blank">Google Developers Console</a> and create an API key for Google Sheets API.</p>
+                    </div>
+                    <div class="step">
+                        <h4>Step 2: Enter API Configuration</h4>
+                        <form id="googleSheetsForm">
+                            <div class="form-group">
+                                <label for="apiKey">API Key:</label>
+                                <input type="password" id="apiKey" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="spreadsheetId">Spreadsheet ID:</label>
+                                <input type="text" id="spreadsheetId" placeholder="Found in the URL of your Google Sheet">
+                            </div>
+                            <button type="submit" class="btn btn-primary">Test Connection | 测试连接</button>
+                        </form>
+                    </div>
+                </div>
+                <div class="connection-status" id="connectionStatus"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notification Container -->
+    <div class="notifications" id="notifications"></div>
+
+    <!-- Scripts -->
+    <script>
+        // Simple error handler for debugging
+        window.addEventListener('error', function(e) {
+            console.error('Global error:', e.error);
+            document.getElementById('loadingScreen').style.display = 'none';
+            document.getElementById('app').style.display = 'block';
+            document.getElementById('app').innerHTML = '<div style="padding: 20px; text-align: center; color: white;"><h2>Error Loading App</h2><p>Error: ' + e.message + '</p><p>Check browser console for details</p></div>';
+        });
+        
+        // Fallback timer to hide loading screen
+        setTimeout(function() {
+            const loadingScreen = document.getElementById('loadingScreen');
+            const app = document.getElementById('app');
+            if (loadingScreen && loadingScreen.style.display !== 'none') {
+                console.warn('App took too long to load, showing fallback');
+                loadingScreen.style.display = 'none';
+                app.classList.add('loaded');
+            }
+        }, 5000);
+    </script>
+    
+    <script src="config.js"></script>
+    <script src="storage.js"></script>
+    <script src="googleSheets.js"></script>
+    <script src="app.js"></script>
+    
+    <!-- Service Worker Registration -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('sw.js')
+                    .then(registration => console.log('SW registered'))
+                    .catch(error => console.log('SW registration failed'));
+            });
+        }
+    </script>
+</body>
+</html>
