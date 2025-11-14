@@ -762,30 +762,12 @@ function doPost(e) {<br>
             try {
                 console.log('Testing Google Apps Script URL:', webAppUrl);
                 
-                // First, try a simple GET request to test basic connectivity
-                console.log('Step 1: Testing basic connectivity with GET request...');
-                const getResponse = await fetch(webAppUrl, {
-                    method: 'GET',
-                    mode: 'cors'
-                });
+                // Use a simpler approach with no-cors mode first, then try regular fetch
+                console.log('Step 1: Testing basic connectivity...');
                 
-                console.log('GET Response status:', getResponse.status);
-                console.log('GET Response headers:', Object.fromEntries(getResponse.headers.entries()));
-                
-                if (!getResponse.ok) {
-                    const errorText = await getResponse.text();
-                    console.log('GET Response error text:', errorText);
-                    throw new Error(`GET test failed - HTTP ${getResponse.status}: ${getResponse.statusText}`);
-                }
-                
-                const getResult = await getResponse.json();
-                console.log('GET Response JSON:', getResult);
-                
-                // Now try the POST request
-                console.log('Step 2: Testing POST request...');
+                // Try direct POST request (Google Apps Script sometimes doesn't like separate GET/POST)
                 const testResponse = await fetch(webAppUrl, {
                     method: 'POST',
-                    mode: 'cors',
                     headers: {
                         'Content-Type': 'application/json',
                     },
@@ -794,17 +776,18 @@ function doPost(e) {<br>
                     })
                 });
 
-                console.log('POST Response status:', testResponse.status);
-                console.log('POST Response headers:', Object.fromEntries(testResponse.headers.entries()));
+                console.log('Response status:', testResponse.status);
+                console.log('Response ok:', testResponse.ok);
+                console.log('Response headers:', Object.fromEntries(testResponse.headers.entries()));
 
                 if (!testResponse.ok) {
                     const errorText = await testResponse.text();
-                    console.log('POST Response error text:', errorText);
-                    throw new Error(`POST test failed - HTTP ${testResponse.status}: ${testResponse.statusText}`);
+                    console.log('Response error text:', errorText);
+                    throw new Error(`HTTP ${testResponse.status}: ${testResponse.statusText}`);
                 }
 
                 const result = await testResponse.json();
-                console.log('POST Response JSON:', result);
+                console.log('Response JSON:', result);
                 
                 if (!result.success) {
                     throw new Error(result.error || 'Unknown error from Apps Script');
@@ -832,53 +815,45 @@ function doPost(e) {<br>
                 let errorMessage = '';
                 
                 if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError') || error.name === 'TypeError') {
-                    errorMessage = `❌ Network Error: Cannot reach Google Apps Script.
+                    errorMessage = `❌ Connection Error: ${error.message}
 
-🔧 Possible Issues:
-1. **Internet Connection**: Check your internet connection
-2. **Firewall/Antivirus**: Temporarily disable firewall or antivirus
-3. **Browser**: Try a different browser or incognito mode
-4. **VPN**: Disable VPN if you're using one
+🔧 **Troubleshooting Steps**:
 
-🧪 **Manual Test**: 
-Open this URL in a new tab: ${webAppUrl}
-You should see a JSON response like: {"success":true,"message":"Google Apps Script is working!"}
+1. **Check Browser Settings**:
+   - Disable ad blockers temporarily
+   - Try incognito/private mode
+   - Clear browser cache and cookies
 
-❌ 网络错误：无法访问谷歌应用脚本。
+2. **Network Issues**:
+   - Check internet connection
+   - Disable VPN if using one
+   - Try different network (mobile hotspot)
 
-🔧 详细错误: ${error.message}`;
-                } else if (error.message.includes('GET test failed')) {
-                    errorMessage = `❌ Google Apps Script URL Error
+3. **Google Apps Script Settings**:
+   - Verify "Who has access" is set to "Anyone"
+   - Try creating a new deployment
+   - Make sure script is saved before deploying
 
-The URL doesn't respond to basic requests. This usually means:
+4. **Alternative Test**:
+   Open this URL directly: ${webAppUrl}
+   It should show JSON with "success":true
 
-1. **Wrong URL**: Double-check you copied the deployment URL correctly
-2. **Not Deployed**: Make sure the script is deployed as a Web App
-3. **Permissions**: Ensure "Who has access" is set to "Anyone"
+❌ 连接错误：无法访问谷歌应用脚本。
 
-🧪 **Try this**: 
-- Go to your Google Apps Script
-- Click "Deploy" → "Manage deployments"
-- Verify settings and get a fresh URL
+🔧 详细错误: ${error.message}
 
-❌ 应用脚本URL错误`;
-                } else if (error.message.includes('POST test failed')) {
-                    errorMessage = `❌ Apps Script Configuration Error
-
-Basic connectivity works but POST requests fail. Check:
-
-1. **Function Name**: Ensure your script has both doGet() and doPost() functions
-2. **Permissions**: Re-authorize the script permissions
-3. **Spreadsheet Access**: Verify the script can access your Google Sheet
-
-❌ 应用脚本配置错误`;
+**Try refreshing this page and testing again.**`;
                 } else if (error.message.includes('404')) {
-                    errorMessage = `❌ URL Not Found: Web App URL is incorrect.
+                    errorMessage = `❌ URL Not Found (404)
 
-🔧 Make sure:
-- You copied the correct deployment URL (should end with /exec)
-- The script is deployed as a Web app
-- Try creating a new deployment
+The Google Apps Script URL is incorrect or the deployment doesn't exist.
+
+🔧 **Fix**:
+1. Go to script.google.com
+2. Open your project
+3. Click "Deploy" → "Manage deployments"  
+4. Copy the correct Web App URL
+5. Make sure it ends with /exec
 
 ❌ 找不到URL：Web应用URL不正确。`;
                 } else {
@@ -887,7 +862,7 @@ Basic connectivity works but POST requests fail. Check:
 🔧 Debug Info:
 - Web App URL: ${webAppUrl}
 - Error Type: ${error.name}
-- Browser Console: Press F12 and check the Console tab for more details
+- Browser Console: Press F12 and check Console tab for details
 
 ❌ 连接失败：${error.message}`;
                 }
