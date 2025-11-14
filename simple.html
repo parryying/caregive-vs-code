@@ -189,6 +189,88 @@
             }
         }
         
+        /* Caregiver Selection */
+        .caregiver-section {
+            background: white;
+            border-radius: 0.5rem;
+            padding: 1rem;
+            margin: 1rem;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            border: 2px solid #e5e7eb;
+        }
+        
+        .caregiver-selector {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+        
+        .caregiver-dropdown {
+            flex: 1;
+            padding: 0.75rem;
+            border: 2px solid #d1d5db;
+            border-radius: 0.375rem;
+            font-size: 1rem;
+            background: white;
+        }
+        
+        .caregiver-dropdown:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+        
+        .add-caregiver-btn {
+            padding: 0.75rem 1rem;
+            background: #10b981;
+            color: white;
+            border: none;
+            border-radius: 0.375rem;
+            cursor: pointer;
+            font-size: 0.875rem;
+            white-space: nowrap;
+        }
+        
+        .add-caregiver-btn:hover {
+            background: #059669;
+        }
+        
+        .caregiver-info {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.75rem;
+            background: #f3f4f6;
+            border-radius: 0.375rem;
+            margin-top: 0.5rem;
+        }
+        
+        .caregiver-avatar {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 1.25rem;
+        }
+        
+        .caregiver-details h3 {
+            margin: 0;
+            font-size: 1rem;
+            color: #1f2937;
+        }
+        
+        .caregiver-details p {
+            margin: 0;
+            font-size: 0.875rem;
+            color: #6b7280;
+        }
+        
         /* Modal Styles */
         .modal {
             position: fixed;
@@ -275,16 +357,36 @@
             <div id="currentTime">Loading...</div>
         </header>
 
+        <!-- Caregiver Selection Section -->
+        <div class="caregiver-section">
+            <div class="caregiver-selector">
+                <select id="caregiverDropdown" class="caregiver-dropdown">
+                    <option value="">Select Caregiver | 选择护工</option>
+                </select>
+                <button class="add-caregiver-btn" onclick="showAddCaregiverModal()">
+                    + Add Caregiver | 添加护工
+                </button>
+            </div>
+            
+            <div id="caregiverInfo" class="caregiver-info" style="display: none;">
+                <div id="caregiverAvatar" class="caregiver-avatar">M</div>
+                <div class="caregiver-details">
+                    <h3 id="caregiverNameDisplay">Maria Chen | 陈玛丽亚</h3>
+                    <p id="caregiverRole">Primary Caregiver | 主要护工</p>
+                </div>
+            </div>
+        </div>
+
         <!-- Main Card -->
         <div class="caregiver-card">
-            <h2 class="caregiver-name">Maria Chen | 陈玛丽亚</h2>
+            <h2 id="mainCaregiverName" class="caregiver-name">Select a caregiver to start | 请选择护工开始</h2>
             <div id="statusBadge" class="status-badge">
-                <span id="statusText">Clocked Out | 已下班</span>
+                <span id="statusText">No Caregiver Selected | 未选择护工</span>
             </div>
 
             <!-- Clock Controls -->
             <div>
-                <button class="btn btn-success" id="clockInBtn" onclick="clockIn()">
+                <button class="btn btn-success" id="clockInBtn" onclick="clockIn()" disabled>
                     <span>Clock In<br><small>上班打卡</small></span>
                 </button>
                 <button class="btn btn-danger" id="clockOutBtn" onclick="clockOut()" disabled>
@@ -392,6 +494,55 @@ function doPost(e) {<br>
         </div>
     </div>
 
+    <!-- Add Caregiver Modal -->
+    <div id="addCaregiverModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Add New Caregiver | 添加新护工</h3>
+                <button class="close-btn" onclick="hideAddCaregiverModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="caregiverForm" onsubmit="addCaregiver(event)">
+                    <div style="margin: 1rem 0;">
+                        <label style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Full Name | 姓名:</label>
+                        <input type="text" id="caregiverName" placeholder="Maria Chen" style="width: 100%; padding: 0.75rem; border: 1px solid #ccc; border-radius: 0.25rem;" required>
+                    </div>
+                    
+                    <div style="margin: 1rem 0;">
+                        <label style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Chinese Name | 中文名 (Optional):</label>
+                        <input type="text" id="caregiverChineseName" placeholder="陈玛丽亚" style="width: 100%; padding: 0.75rem; border: 1px solid #ccc; border-radius: 0.25rem;">
+                    </div>
+                    
+                    <div style="margin: 1rem 0;">
+                        <label style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Role | 职位:</label>
+                        <select id="caregiverRole" style="width: 100%; padding: 0.75rem; border: 1px solid #ccc; border-radius: 0.25rem;">
+                            <option value="Primary Caregiver">Primary Caregiver | 主要护工</option>
+                            <option value="Relief Caregiver">Relief Caregiver | 替班护工</option>
+                            <option value="Night Shift">Night Shift | 夜班护工</option>
+                            <option value="Weekend Caregiver">Weekend Caregiver | 周末护工</option>
+                            <option value="Temporary">Temporary | 临时护工</option>
+                        </select>
+                    </div>
+                    
+                    <div style="margin: 1rem 0;">
+                        <label style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Phone | 电话 (Optional):</label>
+                        <input type="tel" id="caregiverPhone" placeholder="+1 (555) 123-4567" style="width: 100%; padding: 0.75rem; border: 1px solid #ccc; border-radius: 0.25rem;">
+                    </div>
+                    
+                    <div style="margin: 1rem 0;">
+                        <label style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Weekly Hours Limit | 每周工作小时限制:</label>
+                        <input type="number" id="caregiverHours" value="40" min="1" max="168" style="width: 100%; padding: 0.75rem; border: 1px solid #ccc; border-radius: 0.25rem;">
+                    </div>
+                    
+                    <div style="display: flex; gap: 1rem; margin-top: 1.5rem;">
+                        <button type="button" onclick="hideAddCaregiverModal()" style="flex: 1; padding: 0.75rem; border: 1px solid #ccc; background: white; border-radius: 0.25rem; cursor: pointer;">Cancel | 取消</button>
+                        <button type="submit" class="btn" style="flex: 1; background: #10b981; color: white; padding: 0.75rem; border-radius: 0.25rem;">Add Caregiver | 添加护工</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
     <style>
         @keyframes spin {
             to { transform: rotate(360deg); }
@@ -404,6 +555,10 @@ function doPost(e) {<br>
         let startTime = null;
         let timerInterval = null;
         let hoursWorked = 0;
+        
+        // Caregiver management
+        let caregivers = [];
+        let currentCaregiver = null;
         
         // Google Sheets integration
         let googleSheetsConfig = {
@@ -429,6 +584,7 @@ function doPost(e) {<br>
             // Load saved data
             loadData();
             loadGoogleSheetsConfig();
+            loadCaregivers();
             
             console.log('App initialized successfully!');
         }
@@ -449,6 +605,10 @@ function doPost(e) {<br>
 
         async function clockIn() {
             if (isClocked) return;
+            if (!currentCaregiver) {
+                showNotification('Please select a caregiver first | 请先选择护工', 'error');
+                return;
+            }
             
             isClocked = true;
             startTime = new Date();
@@ -467,7 +627,9 @@ function doPost(e) {<br>
             await logToGoogleSheets('CLOCK_IN', {
                 action: 'Clock In',
                 timestamp: startTime.toISOString(),
-                caregiver: 'Maria Chen | 陈玛丽亚'
+                caregiver: currentCaregiver.chineseName ? 
+                    `${currentCaregiver.name} | ${currentCaregiver.chineseName}` : 
+                    currentCaregiver.name
             });
             
             // Save state
@@ -479,6 +641,10 @@ function doPost(e) {<br>
 
         async function clockOut() {
             if (!isClocked || !startTime) return;
+            if (!currentCaregiver) {
+                showNotification('No caregiver selected | 未选择护工', 'error');
+                return;
+            }
             
             const endTime = new Date();
             const sessionHours = (endTime - startTime) / (1000 * 60 * 60);
@@ -501,7 +667,9 @@ function doPost(e) {<br>
             await logToGoogleSheets('CLOCK_OUT', {
                 action: 'Clock Out',
                 timestamp: endTime.toISOString(),
-                caregiver: 'Maria Chen | 陈玛丽亚',
+                caregiver: currentCaregiver.chineseName ? 
+                    `${currentCaregiver.name} | ${currentCaregiver.chineseName}` : 
+                    currentCaregiver.name,
                 sessionHours: sessionHours.toFixed(2),
                 totalHours: hoursWorked.toFixed(2)
             });
@@ -1016,6 +1184,214 @@ The Google Apps Script URL is incorrect or the deployment doesn't exist.
             } catch (e) {
                 console.warn('Could not load saved data:', e);
             }
+        }
+
+        // Caregiver Management Functions
+        function loadCaregivers() {
+            try {
+                const saved = localStorage.getItem('caregivers');
+                if (saved) {
+                    caregivers = JSON.parse(saved);
+                } else {
+                    // Add default caregiver
+                    caregivers = [{
+                        id: 1,
+                        name: 'Maria Chen',
+                        chineseName: '陈玛丽亚',
+                        role: 'Primary Caregiver',
+                        phone: '',
+                        weeklyHours: 40,
+                        currentHours: 0
+                    }];
+                    saveCaregivers();
+                }
+                
+                updateCaregiverDropdown();
+                
+                // Select first caregiver by default
+                if (caregivers.length > 0 && !currentCaregiver) {
+                    selectCaregiver(caregivers[0].id);
+                }
+            } catch (e) {
+                console.warn('Could not load caregivers:', e);
+            }
+        }
+
+        function saveCaregivers() {
+            try {
+                localStorage.setItem('caregivers', JSON.stringify(caregivers));
+            } catch (e) {
+                console.warn('Could not save caregivers:', e);
+            }
+        }
+
+        function updateCaregiverDropdown() {
+            const dropdown = document.getElementById('caregiverDropdown');
+            dropdown.innerHTML = '<option value="">Select Caregiver | 选择护工</option>';
+            
+            caregivers.forEach(caregiver => {
+                const option = document.createElement('option');
+                option.value = caregiver.id;
+                option.textContent = caregiver.chineseName ? 
+                    `${caregiver.name} | ${caregiver.chineseName}` : 
+                    caregiver.name;
+                dropdown.appendChild(option);
+            });
+            
+            // Set current selection
+            if (currentCaregiver) {
+                dropdown.value = currentCaregiver.id;
+            }
+        }
+
+        function selectCaregiver(caregiverId) {
+            if (!caregiverId) {
+                currentCaregiver = null;
+                document.getElementById('caregiverInfo').style.display = 'none';
+                document.getElementById('mainCaregiverName').textContent = 'Select a caregiver to start | 请选择护工开始';
+                document.getElementById('statusText').textContent = 'No Caregiver Selected | 未选择护工';
+                document.getElementById('clockInBtn').disabled = true;
+                document.getElementById('clockOutBtn').disabled = true;
+                return;
+            }
+
+            currentCaregiver = caregivers.find(c => c.id == caregiverId);
+            if (currentCaregiver) {
+                // Update UI
+                const caregiverInfo = document.getElementById('caregiverInfo');
+                const avatar = document.getElementById('caregiverAvatar');
+                const nameDisplay = document.getElementById('caregiverNameDisplay');
+                const roleDisplay = document.getElementById('caregiverRole');
+                const mainName = document.getElementById('mainCaregiverName');
+
+                caregiverInfo.style.display = 'flex';
+                avatar.textContent = currentCaregiver.name.charAt(0).toUpperCase();
+                nameDisplay.textContent = currentCaregiver.chineseName ? 
+                    `${currentCaregiver.name} | ${currentCaregiver.chineseName}` : 
+                    currentCaregiver.name;
+                roleDisplay.textContent = currentCaregiver.role;
+                mainName.textContent = currentCaregiver.chineseName ? 
+                    `${currentCaregiver.name} | ${currentCaregiver.chineseName}` : 
+                    currentCaregiver.name;
+
+                // Enable buttons
+                document.getElementById('clockInBtn').disabled = false;
+                document.getElementById('clockOutBtn').disabled = false;
+
+                // Update status
+                updateStatus();
+                
+                // Load caregiver-specific data
+                loadCaregiverData();
+            }
+        }
+
+        function loadCaregiverData() {
+            if (!currentCaregiver) return;
+            
+            try {
+                const saved = localStorage.getItem(`caregiverData_${currentCaregiver.id}`);
+                if (saved) {
+                    const data = JSON.parse(saved);
+                    hoursWorked = data.hoursWorked || 0;
+                    isClocked = data.isClocked || false;
+                    startTime = data.startTime ? new Date(data.startTime) : null;
+                    
+                    updateDisplay();
+                    
+                    if (isClocked) {
+                        startTimer();
+                    }
+                }
+            } catch (e) {
+                console.warn('Could not load caregiver data:', e);
+            }
+        }
+
+        function saveCaregiverData() {
+            if (!currentCaregiver) return;
+            
+            try {
+                const data = {
+                    hoursWorked,
+                    isClocked,
+                    startTime: startTime ? startTime.toISOString() : null
+                };
+                localStorage.setItem(`caregiverData_${currentCaregiver.id}`, JSON.stringify(data));
+            } catch (e) {
+                console.warn('Could not save caregiver data:', e);
+            }
+        }
+
+        function showAddCaregiverModal() {
+            document.getElementById('addCaregiverModal').style.display = 'flex';
+        }
+
+        function hideAddCaregiverModal() {
+            document.getElementById('addCaregiverModal').style.display = 'none';
+            document.getElementById('caregiverForm').reset();
+        }
+
+        function addCaregiver(event) {
+            event.preventDefault();
+
+            const name = document.getElementById('caregiverName').value.trim();
+            const chineseName = document.getElementById('caregiverChineseName').value.trim();
+            const role = document.getElementById('caregiverRole').value;
+            const phone = document.getElementById('caregiverPhone').value.trim();
+            const weeklyHours = parseInt(document.getElementById('caregiverHours').value) || 40;
+
+            if (!name) {
+                showNotification('Please enter caregiver name | 请输入护工姓名', 'error');
+                return;
+            }
+
+            // Check if name already exists
+            const exists = caregivers.find(c => c.name.toLowerCase() === name.toLowerCase());
+            if (exists) {
+                showNotification('Caregiver already exists | 护工已存在', 'error');
+                return;
+            }
+
+            const newCaregiver = {
+                id: Date.now(), // Simple ID generation
+                name,
+                chineseName,
+                role,
+                phone,
+                weeklyHours,
+                currentHours: 0
+            };
+
+            caregivers.push(newCaregiver);
+            saveCaregivers();
+            updateCaregiverDropdown();
+            
+            hideAddCaregiverModal();
+            showNotification('Caregiver added successfully | 护工添加成功', 'success');
+
+            // Auto-select the new caregiver
+            selectCaregiver(newCaregiver.id);
+            document.getElementById('caregiverDropdown').value = newCaregiver.id;
+        }
+
+        // Event listener for caregiver dropdown
+        document.addEventListener('DOMContentLoaded', function() {
+            const dropdown = document.getElementById('caregiverDropdown');
+            dropdown.addEventListener('change', function() {
+                selectCaregiver(this.value);
+            });
+        });
+
+        // Override existing saveData to use caregiver-specific storage
+        function saveData() {
+            saveCaregiverData();
+        }
+
+        // Override existing loadData to not conflict with caregiver data
+        function loadData() {
+            // This is now handled by loadCaregiverData()
+            return;
         }
 
         // Start the app
