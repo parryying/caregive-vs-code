@@ -689,29 +689,54 @@ function doPost(e) {<br>
         async function appendToGoogleSheet(row) {
             const url = googleSheetsConfig.webAppUrl;
             
-            console.log('Sending request to Google Apps Script:', url);
+            console.log('Sending request to Google Apps Script via JSONP:', url);
             console.log('Request data:', { values: [row] });
             
             try {
-                const response = await fetch(url, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        values: [row]
-                    })
+                // Use JSONP for data submission to avoid CORS issues
+                const callbackName = 'dataSyncCallback_' + Date.now();
+                const script = document.createElement('script');
+                
+                const result = await new Promise((resolve, reject) => {
+                    // Set up the callback function
+                    window[callbackName] = function(data) {
+                        console.log('JSONP Data sync response:', data);
+                        delete window[callbackName];
+                        if (document.head.contains(script)) {
+                            document.head.removeChild(script);
+                        }
+                        resolve(data);
+                    };
+                    
+                    // Set up error handling
+                    script.onerror = function() {
+                        console.error('JSONP data sync failed to load');
+                        delete window[callbackName];
+                        if (document.head.contains(script)) {
+                            document.head.removeChild(script);
+                        }
+                        reject(new Error('JSONP data sync request failed'));
+                    };
+                    
+                    // Create JSONP URL with data
+                    const dataParam = encodeURIComponent(JSON.stringify({ values: [row] }));
+                    const jsonpUrl = `${url}?callback=${callbackName}&data=${dataParam}`;
+                    console.log('JSONP Data sync URL length:', jsonpUrl.length);
+                    
+                    script.src = jsonpUrl;
+                    document.head.appendChild(script);
+                    
+                    // Timeout after 15 seconds
+                    setTimeout(() => {
+                        if (window[callbackName]) {
+                            delete window[callbackName];
+                            if (document.head.contains(script)) {
+                                document.head.removeChild(script);
+                            }
+                            reject(new Error('JSONP data sync timeout - no response after 15 seconds'));
+                        }
+                    }, 15000);
                 });
-
-                console.log('Response status:', response.status);
-                console.log('Response statusText:', response.statusText);
-
-                if (!response.ok) {
-                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-                }
-
-                const result = await response.json();
-                console.log('Success response:', result);
                 
                 if (result.success) {
                     return { success: true, data: result };
@@ -720,7 +745,7 @@ function doPost(e) {<br>
                 }
                 
             } catch (error) {
-                console.error('Fetch error:', error);
+                console.error('JSONP sync error:', error);
                 return { success: false, error: error.message };
             }
         }
