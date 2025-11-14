@@ -762,32 +762,50 @@ function doPost(e) {<br>
             try {
                 console.log('Testing Google Apps Script URL:', webAppUrl);
                 
-                // Use a simpler approach with no-cors mode first, then try regular fetch
-                console.log('Step 1: Testing basic connectivity...');
+                // Google Apps Script has CORS limitations, let's use JSONP approach
+                console.log('Step 1: Using JSONP approach for Google Apps Script...');
                 
-                // Try direct POST request (Google Apps Script sometimes doesn't like separate GET/POST)
-                const testResponse = await fetch(webAppUrl, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        values: [['Test', 'Connection', new Date().toISOString(), '', '', '', '', 'Test']]
-                    })
+                // Create a dynamic script tag for JSONP
+                const callbackName = 'googleSheetsCallback_' + Date.now();
+                const script = document.createElement('script');
+                
+                const result = await new Promise((resolve, reject) => {
+                    // Set up the callback function
+                    window[callbackName] = function(data) {
+                        console.log('JSONP Response received:', data);
+                        delete window[callbackName];
+                        document.head.removeChild(script);
+                        resolve(data);
+                    };
+                    
+                    // Set up error handling
+                    script.onerror = function() {
+                        console.error('JSONP script failed to load');
+                        delete window[callbackName];
+                        if (document.head.contains(script)) {
+                            document.head.removeChild(script);
+                        }
+                        reject(new Error('JSONP request failed - script could not load'));
+                    };
+                    
+                    // Create the JSONP URL
+                    const jsonpUrl = `${webAppUrl}?callback=${callbackName}&test=true`;
+                    console.log('JSONP URL:', jsonpUrl);
+                    
+                    script.src = jsonpUrl;
+                    document.head.appendChild(script);
+                    
+                    // Timeout after 10 seconds
+                    setTimeout(() => {
+                        if (window[callbackName]) {
+                            delete window[callbackName];
+                            if (document.head.contains(script)) {
+                                document.head.removeChild(script);
+                            }
+                            reject(new Error('JSONP request timeout - no response after 10 seconds'));
+                        }
+                    }, 10000);
                 });
-
-                console.log('Response status:', testResponse.status);
-                console.log('Response ok:', testResponse.ok);
-                console.log('Response headers:', Object.fromEntries(testResponse.headers.entries()));
-
-                if (!testResponse.ok) {
-                    const errorText = await testResponse.text();
-                    console.log('Response error text:', errorText);
-                    throw new Error(`HTTP ${testResponse.status}: ${testResponse.statusText}`);
-                }
-
-                const result = await testResponse.json();
-                console.log('Response JSON:', result);
                 
                 if (!result.success) {
                     throw new Error(result.error || 'Unknown error from Apps Script');
