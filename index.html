@@ -5,290 +5,3630 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="theme-color" content="#7c3aed">
     <title>Caregiver Time Tracker | 护工时间追踪</title>
-    
-    <!-- PWA Meta Tags -->
-    <meta name="description" content="Family Dashboard for tracking caregiver work hours">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="default">
-    <meta name="apple-mobile-web-app-title" content="Caregiver Tracker">
-    
-    <!-- Favicon -->
-    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>👩‍⚕️</text></svg>">
-    
-    <!-- Manifest for PWA -->
-    <link rel="manifest" href="manifest.json">
-    
-    <!-- Stylesheets -->
-    <link rel="stylesheet" href="styles.css">
-    
-    <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* Simple inline CSS version */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #7c3aed 0%, #3b82f6 100%);
+            min-height: 100vh;
+            color: #334155;
+            line-height: 1.6;
+        }
+        
+        .loading-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #7c3aed 0%, #3b82f6 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10000;
+            color: white;
+        }
+        
+        .loading-screen.hide {
+            display: none;
+        }
+        
+        .app-container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 1.5rem;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        
+        .app-container.loaded {
+            opacity: 1;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 2rem;
+            color: white;
+        }
+        
+        .title {
+            font-size: 1.875rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+        
+        .subtitle {
+            font-size: 1.25rem;
+            opacity: 0.9;
+        }
+        
+        .caregiver-card {
+            background: linear-gradient(145deg, #ffffff 0%, #f8fafc 100%);
+            border-radius: 1rem;
+            padding: 2rem;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+            text-align: center;
+        }
+        
+        .caregiver-name {
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            color: #334155;
+        }
+        
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0.5rem 1.5rem;
+            border-radius: 0.75rem;
+            background: #fca5a5;
+            color: #dc2626;
+            font-weight: 500;
+            margin-bottom: 1.5rem;
+        }
+        
+        .status-badge.clocked-in {
+            background: #dcfce7;
+            color: #16a34a;
+        }
+        
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem 1.5rem;
+            border: none;
+            border-radius: 0.5rem;
+            font-size: 1rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.15s;
+            margin: 0.5rem;
+            min-height: 44px;
+        }
+        
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        
+        .btn-success {
+            background: #10b981;
+            color: white;
+        }
+        
+        .btn-danger {
+            background: #ef4444;
+            color: white;
+        }
+        
+        .btn:not(:disabled):hover {
+            transform: translateY(-1px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        }
+        
+        .time-display {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+            margin: 1.5rem 0;
+            padding: 1.5rem;
+            background: rgba(59, 130, 246, 0.1);
+            border-radius: 0.75rem;
+        }
+        
+        .time-stat {
+            text-align: center;
+        }
+        
+        .time-value {
+            font-size: 1.875rem;
+            font-weight: 700;
+            color: #3b82f6;
+            margin-bottom: 0.5rem;
+        }
+        
+        .time-label {
+            font-size: 0.875rem;
+            color: #64748b;
+        }
+        
+        .live-timer {
+            margin: 1rem 0;
+            padding: 1rem;
+            background: linear-gradient(135deg, #10b981, #059669);
+            border-radius: 0.75rem;
+            color: white;
+            display: none;
+        }
+        
+        .timer-display {
+            font-size: 1.875rem;
+            font-weight: 700;
+            font-family: 'Courier New', monospace;
+            text-align: center;
+        }
+        
+        @media (max-width: 768px) {
+            .app-container {
+                padding: 1rem;
+            }
+            
+            .time-display {
+                grid-template-columns: 1fr;
+                text-align: center;
+            }
+        }
+        
+        /* Caregiver Selection */
+        .caregiver-section {
+            background: white;
+            border-radius: 0.5rem;
+            padding: 1rem;
+            margin: 1rem;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            border: 2px solid #e5e7eb;
+        }
+        
+        /* Caregiver List Styles */
+        .caregivers-list {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        
+        .caregiver-card {
+            background: white;
+            border: 2px solid #e5e7eb;
+            border-radius: 1rem;
+            padding: 1.5rem;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            transition: all 0.2s ease;
+        }
+        
+        .caregiver-card:hover {
+            border-color: #3b82f6;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        
+        .caregiver-header {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+        
+        .caregiver-avatar {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 1.5rem;
+            flex-shrink: 0;
+        }
+        
+        .caregiver-info h3 {
+            margin: 0;
+            font-size: 1.25rem;
+            color: #1f2937;
+        }
+        
+        .caregiver-info p {
+            margin: 0.25rem 0 0 0;
+            font-size: 0.875rem;
+            color: #6b7280;
+        }
+        
+        .caregiver-status {
+            padding: 0.25rem 0.75rem;
+            border-radius: 1rem;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        
+        .status-available {
+            background: #dcfce7;
+            color: #166534;
+        }
+        
+        .status-working {
+            background: #fef3c7;
+            color: #92400e;
+        }
+        
+        .caregiver-controls {
+            display: flex;
+            gap: 0.75rem;
+            margin: 1rem 0;
+            flex-wrap: wrap;
+        }
+        
+        .caregiver-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 1rem;
+            margin: 1rem 0;
+        }
+        
+        .stat-card {
+            background: #f9fafb;
+            padding: 1rem;
+            border-radius: 0.5rem;
+            text-align: center;
+        }
+        
+        .stat-value {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #1f2937;
+            margin-bottom: 0.25rem;
+        }
+        
+        .stat-label {
+            font-size: 0.75rem;
+            color: #6b7280;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        
+        .caregiver-timer {
+            background: #fef3c7;
+            border: 2px solid #f59e0b;
+            border-radius: 0.5rem;
+            padding: 1rem;
+            text-align: center;
+            margin: 1rem 0;
+        }
+        
+        .timer-display {
+            font-size: 2rem;
+            font-weight: bold;
+            font-family: 'Courier New', monospace;
+            color: #92400e;
+            margin-bottom: 0.5rem;
+        }
+        
+        .timer-label {
+            font-size: 0.875rem;
+            color: #92400e;
+        }
+        
+        .caregiver-sessions {
+            margin-top: 1rem;
+        }
+        
+        .sessions-header {
+            font-size: 1rem;
+            font-weight: 600;
+            color: #374151;
+            margin-bottom: 0.75rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        
+        .session-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.75rem;
+            background: #f9fafb;
+            border-radius: 0.375rem;
+            margin-bottom: 0.5rem;
+            font-size: 0.875rem;
+        }
+        
+        .session-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex: 1;
+        }
+        
+        .session-actions {
+            display: flex;
+            gap: 0.25rem;
+            margin-left: 0.5rem;
+        }
+        
+        .edit-session-btn, .delete-session-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 0.25rem;
+            border-radius: 0.25rem;
+            font-size: 0.875rem;
+            transition: background-color 0.2s;
+        }
+        
+        .edit-session-btn:hover {
+            background: #e5e7eb;
+        }
+        
+        .delete-session-btn:hover {
+            background: #fecaca;
+        }
+        
+        .session-date {
+            font-weight: 500;
+            color: #374151;
+        }
+        
+        .session-times {
+            color: #6b7280;
+        }
+        
+        .session-duration {
+            font-weight: 600;
+            color: #059669;
+        }
+        
+        /* Admin Section */
+        .admin-section {
+            background: #f9fafb;
+            border-radius: 1rem;
+            padding: 1.5rem;
+            margin-top: 2rem;
+            border: 1px solid #e5e7eb;
+        }
+        
+        .admin-section .section-header h2 {
+            color: #6b7280;
+            font-size: 1rem;
+        }
+        
+        /* Modal Styles */
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+        
+        .modal-content {
+            background: white;
+            border-radius: 0.5rem;
+            max-width: 500px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+        
+        .modal-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 1rem;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        
+        .modal-body {
+            padding: 1rem;
+        }
+        
+        .close-btn {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: #6b7280;
+        }
+        
+        .close-btn:hover {
+            color: #374151;
+        }
+        
+        .setup-instructions {
+            margin-bottom: 1.5rem;
+            font-size: 0.875rem;
+        }
+        
+        .setup-instructions h4 {
+            margin-bottom: 0.5rem;
+            color: #374151;
+        }
+        
+        .setup-instructions p {
+            margin-bottom: 0.25rem;
+            color: #6b7280;
+        }
+        
+        .setup-instructions a {
+            color: #3b82f6;
+            text-decoration: none;
+        }
+        
+        /* Time Logs Modal */
+        .time-logs-modal .modal-content {
+            max-width: 900px;
+            width: 95%;
+            max-height: 90vh;
+        }
+        
+        .time-logs-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1rem 0;
+            font-size: 0.875rem;
+        }
+        
+        .time-logs-table th,
+        .time-logs-table td {
+            padding: 0.75rem 0.5rem;
+            text-align: left;
+            border-bottom: 1px solid #e5e7eb;
+            vertical-align: middle;
+        }
+        
+        .time-logs-table th {
+            background: #f9fafb;
+            font-weight: 600;
+            color: #374151;
+            position: sticky;
+            top: 0;
+            z-index: 1;
+        }
+        
+        .time-logs-table tbody tr:hover {
+            background: #f3f4f6;
+        }
+        
+        .log-actions {
+            display: flex;
+            gap: 0.25rem;
+            flex-wrap: wrap;
+        }
+        
+        .log-actions button {
+            padding: 0.25rem 0.5rem;
+            border: none;
+            border-radius: 0.25rem;
+            cursor: pointer;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+        
+        .edit-btn {
+            background: #3b82f6;
+            color: white;
+        }
+        
+        .delete-btn {
+            background: #ef4444;
+            color: white;
+        }
+        
+        .add-entry-btn {
+            background: #10b981;
+            color: white;
+            margin-bottom: 1rem;
+        }
+        
+        .time-input {
+            width: 100%;
+            padding: 0.5rem;
+            border: 1px solid #d1d5db;
+            border-radius: 0.25rem;
+            font-size: 0.875rem;
+        }
+        
+        .form-row {
+            display: flex;
+            gap: 1rem;
+            margin: 0.75rem 0;
+            align-items: center;
+        }
+        
+        .form-group {
+            flex: 1;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 0.25rem;
+            font-weight: 500;
+            font-size: 0.875rem;
+        }
+        
+        @media (max-width: 768px) {
+            .time-logs-table {
+                font-size: 0.75rem;
+            }
+            
+            .time-logs-table th,
+            .time-logs-table td {
+                padding: 0.5rem 0.25rem;
+            }
+            
+            .form-row {
+                flex-direction: column;
+                gap: 0.5rem;
+            }
+        }
+
+        /* Senior-friendly UI Styles */
+        .caregivers-section, .recent-sessions-section {
+            background: white;
+            border-radius: 0.75rem;
+            padding: 1.5rem;
+            margin: 1rem 0;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+        
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+            padding-bottom: 0.75rem;
+            border-bottom: 2px solid #e5e7eb;
+        }
+        
+        .section-header h2 {
+            margin: 0;
+            color: #1f2937;
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+        
+        .manage-btn, .setup-btn {
+            background: #10b981;
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.5rem;
+            font-size: 1rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        
+        .manage-btn:hover, .setup-btn:hover {
+            background: #059669;
+        }
+        
+        .caregivers-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 0.75rem;
+        }
+        
+        .caregiver-card {
+            border: 2px solid #e5e7eb;
+            border-radius: 0.75rem;
+            padding: 1.5rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            background: #f9fafb;
+        }
+        
+        .caregiver-card:hover {
+            border-color: #10b981;
+            background: #ecfdf5;
+        }
+        
+        .caregiver-card.selected {
+            border-color: #10b981;
+            background: #ecfdf5;
+            box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
+        }
+        
+        .caregiver-card h3 {
+            margin: 0 0 0.5rem 0;
+            font-size: 1.25rem;
+            color: #1f2937;
+        }
+        
+        .caregiver-card p {
+            margin: 0 0 1rem 0;
+            color: #6b7280;
+        }
+        
+        .caregiver-actions {
+            display: flex;
+            gap: 0.5rem;
+            margin-top: 1rem;
+        }
+        
+        .edit-caregiver-btn, .delete-caregiver-btn {
+            padding: 0.5rem 1rem;
+            border: none;
+            border-radius: 0.375rem;
+            font-size: 0.875rem;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        
+        .edit-caregiver-btn {
+            background: #3b82f6;
+            color: white;
+        }
+        
+        .delete-caregiver-btn {
+            background: #ef4444;
+            color: white;
+        }
+        
+        .active-status {
+            background: white;
+            border-radius: 0.75rem;
+            padding: 1.5rem;
+            margin: 1rem 0;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            border-left: 4px solid #10b981;
+        }
+        
+        .status-header h3 {
+            margin: 0;
+            font-size: 1.5rem;
+            color: #1f2937;
+        }
+        
+        .current-status {
+            background: #ecfdf5;
+            color: #065f46;
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            margin: 0.75rem 0;
+            font-weight: 500;
+            border: 1px solid #10b981;
+        }
+        
+        .clock-controls {
+            display: flex;
+            gap: 1rem;
+            margin: 1.5rem 0;
+        }
+        
+        .clock-btn {
+            flex: 1;
+            padding: 1rem 1.5rem;
+            border: none;
+            border-radius: 0.75rem;
+            font-size: 1.125rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .clock-in {
+            background: #10b981;
+            color: white;
+        }
+        
+        .clock-in:hover:not(:disabled) {
+            background: #059669;
+        }
+        
+        .clock-out {
+            background: #ef4444;
+            color: white;
+        }
+        
+        .clock-out:hover:not(:disabled) {
+            background: #dc2626;
+        }
+        
+        .clock-btn:disabled {
+            background: #d1d5db;
+            color: #9ca3af;
+            cursor: not-allowed;
+        }
+        
+        .hours-summary {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+            margin: 1.5rem 0;
+        }
+        
+        .hours-card {
+            background: #f3f4f6;
+            border-radius: 0.5rem;
+            padding: 1rem;
+            text-align: center;
+        }
+        
+        .hours-value {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #1f2937;
+            margin-bottom: 0.25rem;
+        }
+        
+        .hours-label {
+            font-size: 0.875rem;
+            color: #6b7280;
+        }
+        
+        .recent-sessions-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+        
+        .session-card {
+            border: 1px solid #e5e7eb;
+            border-radius: 0.5rem;
+            padding: 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #f9fafb;
+        }
+        
+        .session-info {
+            flex: 1;
+        }
+        
+        .session-time {
+            font-weight: 600;
+            color: #1f2937;
+            margin-bottom: 0.25rem;
+        }
+        
+        .session-duration {
+            font-size: 0.875rem;
+            color: #6b7280;
+        }
+        
+        .session-actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+        
+        .edit-session-btn, .delete-session-btn {
+            padding: 0.5rem 0.75rem;
+            border: none;
+            border-radius: 0.375rem;
+            font-size: 0.875rem;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        
+        .edit-session-btn {
+            background: #3b82f6;
+            color: white;
+        }
+        
+        .delete-session-btn {
+            background: #ef4444;
+            color: white;
+        }
+        
+        .sync-status {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .connection-status {
+            font-size: 1rem;
+            font-weight: 500;
+        }
+        
+        @media (max-width: 768px) {
+            .caregivers-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .clock-controls {
+                flex-direction: column;
+            }
+            
+            .sync-status {
+                flex-direction: column;
+                gap: 1rem;
+                align-items: stretch;
+            }
+        }
+    </style>
 </head>
 <body>
     <!-- Loading Screen -->
     <div id="loadingScreen" class="loading-screen">
-        <div class="loader">
-            <div class="spinner"></div>
+        <div>
+            <div style="width: 40px; height: 40px; border: 3px solid rgba(255, 255, 255, 0.3); border-radius: 50%; border-top-color: white; animation: spin 1s ease-in-out infinite; margin: 0 auto 1rem;"></div>
             <p>Loading Caregiver Tracker...</p>
         </div>
     </div>
 
-    <!-- Main App Container -->
+    <!-- Main App -->
     <div id="app" class="app-container">
         <!-- Header -->
         <header class="header">
             <h1 class="title">Caregiver Time Tracker<br><span class="subtitle">护工时间追踪</span></h1>
-            <p class="dashboard-title">Family Dashboard | 家庭管理面板</p>
-            <div class="current-time" id="currentTime"></div>
-            
-            <!-- Sync Status -->
-            <div class="sync-status" id="syncStatus">
-                <div class="sync-indicator" id="syncIndicator"></div>
-                <span id="syncText">Synced</span>
-            </div>
+            <p>Family Dashboard | 家庭管理面板</p>
+            <div id="currentTime">Loading...</div>
         </header>
 
-        <!-- Admin Controls -->
-        <div class="admin-controls">
-            <button class="btn btn-secondary" id="manageCaregivers">
-                <span>Manage Caregivers</span>
-                <span class="btn-text-cn">管理护工</span>
-            </button>
-            <button class="btn btn-secondary" id="generateReport">
-                <span>Generate Report</span>
-                <span class="btn-text-cn">生成报告</span>
-            </button>
-            <button class="btn btn-secondary" id="setupGoogleSheets">
-                <span>Setup Google Sheets</span>
-                <span class="btn-text-cn">设置表格</span>
-            </button>
-        </div>
-
-        <!-- Caregiver Selection -->
-        <div class="caregiver-selector" id="caregiverSelector">
-            <label for="caregiverSelect">Select Caregiver | 选择护工:</label>
-            <select id="caregiverSelect" class="caregiver-select">
-                <option value="maria">Maria Chen | 陈玛丽亚</option>
-            </select>
-            <button class="btn btn-small" id="addCaregiverBtn">+ Add New</button>
-        </div>
-
-        <!-- Main Dashboard -->
-        <main class="main-content">
-            <!-- Caregiver Card -->
-            <div class="caregiver-card" id="caregiverCard">
-                <div class="caregiver-info">
-                    <h2 class="caregiver-name" id="caregiverName">Maria Chen | 陈玛丽亚</h2>
-                    <div class="status-badge" id="statusBadge">
-                        <span class="status-text" id="statusText">Clocked Out | 已下班</span>
-                    </div>
-                </div>
-
-                <!-- Clock Controls -->
-                <div class="clock-controls">
-                    <button class="btn btn-success" id="clockInBtn">
-                        <span>Clock In</span>
-                        <span class="btn-text-cn">上班打卡</span>
-                    </button>
-                    <button class="btn btn-danger" id="clockOutBtn" disabled>
-                        <span>Clock Out</span>
-                        <span class="btn-text-cn">下班打卡</span>
-                    </button>
-                </div>
-
-                <!-- Edit Time Button -->
-                <button class="btn btn-warning" id="editTimeBtn">
-                    <span>Edit Time | 编辑时间</span>
+        <!-- Caregivers List Section -->
+        <div class="caregivers-section">
+            <div class="section-header">
+                <h2>All Caregivers | 所有护工</h2>
+                <button class="manage-btn" onclick="showAddCaregiverModal()">
+                    + Add Caregiver | 添加护工
                 </button>
-
-                <!-- Time Display -->
-                <div class="time-display">
-                    <div class="time-stat">
-                        <div class="time-value" id="hoursWorked">0.0</div>
-                        <div class="time-label">
-                            <span>Hours Worked</span>
-                            <span class="label-cn">已工作小时</span>
-                        </div>
-                    </div>
-                    <div class="time-stat">
-                        <div class="time-value" id="hoursRemaining">160.0</div>
-                        <div class="time-label">
-                            <span>Hours Remaining</span>
-                            <span class="label-cn">剩余小时</span>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Live Timer (when clocked in) -->
-                <div class="live-timer" id="liveTimer" style="display: none;">
-                    <div class="timer-display">
-                        <span id="currentSessionTime">00:00:00</span>
-                        <div class="timer-label">Current Session | 当前工作时间</div>
-                    </div>
-                </div>
             </div>
-
-            <!-- View Time Logs Button -->
-            <button class="btn btn-primary view-logs-btn" id="viewLogsBtn">
-                <span>View Time Logs | 查看时间记录</span>
-            </button>
-        </main>
-    </div>
-
-    <!-- Modals -->
-    <!-- Caregiver Management Modal -->
-    <div class="modal" id="caregiverModal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3>Manage Caregivers | 管理护工</h3>
-                <button class="close-btn" id="closeCaregiverModal">&times;</button>
+            
+            <div id="caregiversList" class="caregivers-list">
+                <!-- Individual caregiver cards with their own controls will be populated here -->
             </div>
-            <div class="modal-body">
-                <form id="caregiverForm">
-                    <div class="form-group">
-                        <label for="caregiverNameInput">Name | 姓名:</label>
-                        <input type="text" id="caregiverNameInput" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="caregiverNameCn">Chinese Name | 中文姓名:</label>
-                        <input type="text" id="caregiverNameCn">
-                    </div>
-                    <div class="form-group">
-                        <label for="monthlyHours">Monthly Hours | 月工作时间:</label>
-                        <input type="number" id="monthlyHours" value="160" min="1">
-                    </div>
-                    <button type="submit" class="btn btn-primary">Add Caregiver | 添加护工</button>
-                </form>
-                <div class="caregiver-list" id="caregiverList"></div>
+        </div>
+
+        <!-- Admin Controls Section (moved to bottom) -->
+        <div class="admin-section">
+            <div class="section-header">
+                <h2>Admin Controls | 管理控制</h2>
+                <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                    <button class="sheets-setup-btn" onclick="showGoogleSheetsSetup()" style="padding: 0.5rem 1rem; background: #10b981; color: white; border: none; border-radius: 0.5rem; cursor: pointer; font-size: 0.875rem;">
+                        ⚙️ Setup Sheets | 设置表格
+                    </button>
+                    <button class="sync-btn" onclick="loadDataFromGoogleSheets()" style="padding: 0.5rem 1rem; background: #3b82f6; color: white; border: none; border-radius: 0.5rem; cursor: pointer; font-size: 0.875rem;">
+                        🔄 Sync | 同步
+                    </button>
+                    <button class="export-btn" onclick="exportData()" style="padding: 0.5rem 1rem; background: #8b5cf6; color: white; border: none; border-radius: 0.5rem; cursor: pointer; font-size: 0.875rem;">
+                        📤 Export | 导出
+                    </button>
+                </div>
             </div>
         </div>
     </div>
 
-    <!-- Time Edit Modal -->
-    <div class="modal" id="timeEditModal">
+    <!-- Edit Session Modal -->
+    <div id="editSessionModal" class="modal" style="display: none;">
         <div class="modal-content">
             <div class="modal-header">
-                <h3>Edit Time | 编辑时间</h3>
-                <button class="close-btn" id="closeTimeEditModal">&times;</button>
+                <h3>Edit Session | 编辑会话</h3>
+                <button class="close-btn" onclick="hideEditSessionModal()">&times;</button>
             </div>
             <div class="modal-body">
-                <form id="timeEditForm">
-                    <div class="form-group">
-                        <label for="editDate">Date | 日期:</label>
-                        <input type="date" id="editDate" required>
+                <form id="editSessionForm" onsubmit="saveSessionEdit(event)">
+                    <input type="hidden" id="editSessionId" value="">
+                    <input type="hidden" id="editCaregiverId" value="">
+                    
+                    <div style="display: grid; gap: 1rem; grid-template-columns: 1fr 1fr;">
+                        <div>
+                            <label style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Date | 日期:</label>
+                            <input type="date" id="editSessionDate" required style="width: 100%; padding: 0.75rem; border: 1px solid #ccc; border-radius: 0.25rem;">
+                        </div>
+                        <div></div>
+                        
+                        <div>
+                            <label style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Clock In | 上班时间:</label>
+                            <input type="time" id="editClockIn" required style="width: 100%; padding: 0.75rem; border: 1px solid #ccc; border-radius: 0.25rem;">
+                        </div>
+                        <div>
+                            <label style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Clock Out | 下班时间:</label>
+                            <input type="time" id="editClockOut" required style="width: 100%; padding: 0.75rem; border: 1px solid #ccc; border-radius: 0.25rem;">
+                        </div>
                     </div>
-                    <div class="form-group">
-                        <label for="editClockIn">Clock In Time | 上班时间:</label>
-                        <input type="time" id="editClockIn" required>
+                    
+                    <div style="margin-top: 1rem;">
+                        <label style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Notes | 备注:</label>
+                        <textarea id="editSessionNotes" style="width: 100%; padding: 0.75rem; border: 1px solid #ccc; border-radius: 0.25rem; min-height: 80px; resize: vertical;" placeholder="Optional notes..."></textarea>
                     </div>
-                    <div class="form-group">
-                        <label for="editClockOut">Clock Out Time | 下班时间:</label>
-                        <input type="time" id="editClockOut" required>
+                    
+                    <div style="display: flex; gap: 1rem; margin-top: 1.5rem;">
+                        <button type="button" onclick="hideEditSessionModal()" style="flex: 1; padding: 0.75rem; border: 1px solid #ccc; background: white; border-radius: 0.25rem; cursor: pointer;">Cancel | 取消</button>
+                        <button type="submit" class="btn" style="flex: 1; background: #3b82f6; color: white; padding: 0.75rem; border-radius: 0.25rem;">Save Changes | 保存更改</button>
                     </div>
-                    <div class="form-group">
-                        <label for="editNotes">Notes | 备注:</label>
-                        <textarea id="editNotes" rows="3"></textarea>
-                    </div>
-                    <button type="submit" class="btn btn-primary">Save Changes | 保存修改</button>
                 </form>
-            </div>
-        </div>
-    </div>
-
-    <!-- Time Logs Modal -->
-    <div class="modal" id="timeLogsModal">
-        <div class="modal-content modal-large">
-            <div class="modal-header">
-                <h3>Time Logs | 时间记录</h3>
-                <button class="close-btn" id="closeTimeLogsModal">&times;</button>
-            </div>
-            <div class="modal-body">
-                <div class="logs-controls">
-                    <input type="date" id="logDateFrom" class="form-control">
-                    <span>to</span>
-                    <input type="date" id="logDateTo" class="form-control">
-                    <button class="btn btn-small" id="filterLogs">Filter | 筛选</button>
-                    <button class="btn btn-small" id="exportLogs">Export | 导出</button>
-                </div>
-                <div class="logs-container" id="logsContainer">
-                    <!-- Time logs will be populated here -->
-                </div>
             </div>
         </div>
     </div>
 
     <!-- Google Sheets Setup Modal -->
-    <div class="modal" id="googleSheetsModal">
+    <div id="googleSheetsModal" class="modal" style="display: none;">
         <div class="modal-content">
             <div class="modal-header">
                 <h3>Google Sheets Setup | 谷歌表格设置</h3>
-                <button class="close-btn" id="closeGoogleSheetsModal">&times;</button>
+                <button class="close-btn" onclick="hideGoogleSheetsSetup()">&times;</button>
             </div>
             <div class="modal-body">
-                <div class="setup-steps">
-                    <div class="step">
-                        <h4>Step 1: Create Google Sheets API Key</h4>
-                        <p>Visit <a href="https://console.developers.google.com" target="_blank">Google Developers Console</a> and create an API key for Google Sheets API.</p>
+                <div class="setup-instructions">
+                    <h4>📋 Simple Setup (Recommended)</h4>
+                    <p><strong>Step 1:</strong> Create Google Apps Script</p>
+                    <p>1. Go to <a href="https://script.google.com" target="_blank">script.google.com</a></p>
+                    <p>2. Click "New Project"</p>
+                    <p>3. Replace default code with the script below</p>
+                    <p>4. Click "Deploy" → "New deployment" → "Web app"</p>
+                    <p>5. Set "Execute as: Me" and "Access: Anyone"</p>
+                    <p>6. Copy the Web App URL</p>
+                    
+                    <div style="background: #f3f4f6; padding: 1rem; margin: 0.5rem 0; border-radius: 0.25rem; font-family: monospace; font-size: 0.75rem;">
+function doPost(e) {<br>
+&nbsp;&nbsp;try {<br>
+&nbsp;&nbsp;&nbsp;&nbsp;const sheet = SpreadsheetApp.openById('YOUR_SHEET_ID_HERE');<br>
+&nbsp;&nbsp;&nbsp;&nbsp;const ws = sheet.getActiveSheet();<br>
+&nbsp;&nbsp;&nbsp;&nbsp;const data = JSON.parse(e.postData.contents);<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;// Add headers if first row<br>
+&nbsp;&nbsp;&nbsp;&nbsp;if (ws.getLastRow() === 0) {<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ws.getRange(1, 1, 1, 8).setValues([['Timestamp', 'Caregiver', 'Date', 'Clock In', 'Clock Out', 'Session Hours', 'Total Hours', 'Action']]);<br>
+&nbsp;&nbsp;&nbsp;&nbsp;}<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;ws.appendRow(data.values[0]);<br>
+&nbsp;&nbsp;&nbsp;&nbsp;return ContentService.createTextOutput(JSON.stringify({success: true})).setMimeType(ContentService.MimeType.JSON);<br>
+&nbsp;&nbsp;} catch (error) {<br>
+&nbsp;&nbsp;&nbsp;&nbsp;return ContentService.createTextOutput(JSON.stringify({success: false, error: error.toString()})).setMimeType(ContentService.MimeType.JSON);<br>
+&nbsp;&nbsp;}<br>
+}
                     </div>
-                    <div class="step">
-                        <h4>Step 2: Enter API Configuration</h4>
-                        <form id="googleSheetsForm">
-                            <div class="form-group">
-                                <label for="apiKey">API Key:</label>
-                                <input type="password" id="apiKey" required>
-                            </div>
-                            <div class="form-group">
-                                <label for="spreadsheetId">Spreadsheet ID:</label>
-                                <input type="text" id="spreadsheetId" placeholder="Found in the URL of your Google Sheet">
-                            </div>
-                            <button type="submit" class="btn btn-primary">Test Connection | 测试连接</button>
-                        </form>
-                    </div>
+                    
+                    <p><strong>Step 2:</strong> Update the script with your Sheet ID</p>
+                    <p><strong>Step 3:</strong> Enter the Web App URL below</p>
                 </div>
-                <div class="connection-status" id="connectionStatus"></div>
+                
+                <form id="googleSheetsForm" onsubmit="testGoogleSheets(event)">
+                    <div style="margin: 1rem 0;">
+                        <label style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Google Apps Script Web App URL:</label>
+                        <input type="url" id="webAppUrl" placeholder="https://script.google.com/macros/s/.../exec" style="width: 100%; padding: 0.5rem; border: 1px solid #ccc; border-radius: 0.25rem;" required>
+                    </div>
+                    <div style="margin: 1rem 0;">
+                        <label style="display: block; margin-bottom: 0.5rem; font-weight: 500; color: #6b7280;">Spreadsheet ID (Auto-managed by Apps Script):</label>
+                        <input type="text" id="spreadsheetId" placeholder="Auto-detected from your Google Apps Script" style="width: 100%; padding: 0.5rem; border: 1px solid #ccc; border-radius: 0.25rem; background: #f9fafb;" disabled>
+                    </div>
+                    <button type="submit" class="btn" style="background: #3b82f6; color: white;">Test Connection | 测试连接</button>
+                </form>
+                
+                <div id="connectionStatus" style="margin-top: 1rem; padding: 0.5rem; border-radius: 0.25rem; display: none;"></div>
             </div>
         </div>
     </div>
 
-    <!-- Notification Container -->
-    <div class="notifications" id="notifications"></div>
+    <!-- Add Caregiver Modal -->
+    <div id="addCaregiverModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Add New Caregiver | 添加新护工</h3>
+                <button class="close-btn" onclick="hideAddCaregiverModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="caregiverForm" onsubmit="addCaregiver(event)">
+                    <div style="margin: 1rem 0;">
+                        <label style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Full Name | 姓名:</label>
+                        <input type="text" id="caregiverName" placeholder="Maria Chen" style="width: 100%; padding: 0.75rem; border: 1px solid #ccc; border-radius: 0.25rem;" required>
+                    </div>
+                    
+                    <div style="margin: 1rem 0;">
+                        <label style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Chinese Name | 中文名 (Optional):</label>
+                        <input type="text" id="caregiverChineseName" placeholder="陈玛丽亚" style="width: 100%; padding: 0.75rem; border: 1px solid #ccc; border-radius: 0.25rem;">
+                    </div>
+                    
+                    <div style="margin: 1rem 0;">
+                        <label style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Role | 职位:</label>
+                        <select id="caregiverRole" style="width: 100%; padding: 0.75rem; border: 1px solid #ccc; border-radius: 0.25rem;">
+                            <option value="Primary Caregiver">Primary Caregiver | 主要护工</option>
+                            <option value="Relief Caregiver">Relief Caregiver | 替班护工</option>
+                            <option value="Night Shift">Night Shift | 夜班护工</option>
+                            <option value="Weekend Caregiver">Weekend Caregiver | 周末护工</option>
+                            <option value="Temporary">Temporary | 临时护工</option>
+                        </select>
+                    </div>
+                    
+                    <div style="margin: 1rem 0;">
+                        <label style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Phone | 电话 (Optional):</label>
+                        <input type="tel" id="caregiverPhone" placeholder="+1 (555) 123-4567" style="width: 100%; padding: 0.75rem; border: 1px solid #ccc; border-radius: 0.25rem;">
+                    </div>
+                    
+                    <div style="margin: 1rem 0;">
+                        <label style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Monthly Hours Limit | 每月工作小时限制:</label>
+                        <input type="number" id="caregiverHours" value="160" min="1" max="744" style="width: 100%; padding: 0.75rem; border: 1px solid #ccc; border-radius: 0.25rem;">
+                    </div>
+                    
+                    <div style="display: flex; gap: 1rem; margin-top: 1.5rem;">
+                        <button type="button" onclick="hideAddCaregiverModal()" style="flex: 1; padding: 0.75rem; border: 1px solid #ccc; background: white; border-radius: 0.25rem; cursor: pointer;">Cancel | 取消</button>
+                        <button type="submit" class="btn" style="flex: 1; background: #10b981; color: white; padding: 0.75rem; border-radius: 0.25rem;">Add Caregiver | 添加护工</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
 
-    <!-- Scripts -->
-    <script>
-        // Simple error handler for debugging
-        window.addEventListener('error', function(e) {
-            console.error('Global error:', e.error);
-            document.getElementById('loadingScreen').style.display = 'none';
-            document.getElementById('app').style.display = 'block';
-            document.getElementById('app').innerHTML = '<div style="padding: 20px; text-align: center; color: white;"><h2>Error Loading App</h2><p>Error: ' + e.message + '</p><p>Check browser console for details</p></div>';
-        });
-        
-        // Fallback timer to hide loading screen
-        setTimeout(function() {
-            const loadingScreen = document.getElementById('loadingScreen');
-            const app = document.getElementById('app');
-            if (loadingScreen && loadingScreen.style.display !== 'none') {
-                console.warn('App took too long to load, showing fallback');
-                loadingScreen.style.display = 'none';
-                app.classList.add('loaded');
-            }
-        }, 5000);
-    </script>
-    
-    <script src="config.js"></script>
-    <script src="storage.js"></script>
-    <script src="googleSheets.js"></script>
-    <script src="app.js"></script>
-    
-    <!-- Service Worker Registration -->
-    <script>
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('sw.js')
-                    .then(registration => console.log('SW registered'))
-                    .catch(error => console.log('SW registration failed'));
-            });
+    <!-- Edit Users Modal -->
+    <div id="editUsersModal" class="modal" style="display: none;">
+        <div class="modal-content" style="max-width: 600px;">
+            <div class="modal-header">
+                <h3>Manage Caregivers | 管理护工</h3>
+                <button class="close-btn" onclick="hideEditUsersModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div id="caregiversList" style="margin-bottom: 1rem;">
+                    <!-- Caregiver list will be populated here -->
+                </div>
+                <button class="add-entry-btn" onclick="showAddCaregiverModal(); hideEditUsersModal();" style="width: 100%;">
+                    + Add New Caregiver | 添加新护工
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Time Logs Modal -->
+    <div id="timeLogsModal" class="modal time-logs-modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Time Logs | 时间记录 <span id="logsCaregiverName"></span></h3>
+                <button class="close-btn" onclick="hideTimeLogsModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <button class="btn add-entry-btn" onclick="showAddEntryForm()">
+                    ➕ Add Manual Entry | 手动添加记录
+                </button>
+                
+                <div id="addEntryForm" style="display: none; background: #f9fafb; padding: 1rem; border-radius: 0.5rem; margin-bottom: 1rem;">
+                    <h4>Add Time Entry | 添加时间记录</h4>
+                    <form onsubmit="addManualEntry(event)">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Date | 日期:</label>
+                                <input type="date" id="entryDate" class="time-input" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Clock In | 上班时间:</label>
+                                <input type="datetime-local" id="clockInTime" class="time-input" required>
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Clock Out | 下班时间:</label>
+                                <input type="datetime-local" id="clockOutTime" class="time-input" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Notes | 备注:</label>
+                                <input type="text" id="entryNotes" class="time-input" placeholder="Optional notes...">
+                            </div>
+                        </div>
+                        <div style="display: flex; gap: 1rem;">
+                            <button type="button" onclick="hideAddEntryForm()" style="flex: 1; padding: 0.5rem; background: #6b7280; color: white; border: none; border-radius: 0.25rem;">Cancel | 取消</button>
+                            <button type="submit" style="flex: 1; padding: 0.5rem; background: #10b981; color: white; border: none; border-radius: 0.25rem;">Add Entry | 添加记录</button>
+                        </div>
+                    </form>
+                </div>
+                
+                <div style="max-height: 400px; overflow-y: auto;">
+                    <table class="time-logs-table">
+                        <thead>
+                            <tr>
+                                <th>Date | 日期</th>
+                                <th>Clock In | 上班</th>
+                                <th>Clock Out | 下班</th>
+                                <th>Hours | 小时</th>
+                                <th>Notes | 备注</th>
+                                <th>Actions | 操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="timeLogsTableBody">
+                            <!-- Time logs will be populated here -->
+                        </tbody>
+                    </table>
+                </div>
+                
+                <div style="margin-top: 1rem; text-align: center; color: #6b7280; font-size: 0.875rem;">
+                    <p>Total Hours This Month: <strong id="monthlyHours">0.0</strong> | 本月总小时数</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Entry Modal -->
+    <div id="editEntryModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Edit Time Entry | 编辑时间记录</h3>
+                <button class="close-btn" onclick="hideEditEntryModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form onsubmit="saveEditedEntry(event)">
+                    <input type="hidden" id="editEntryId">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Date | 日期:</label>
+                            <input type="date" id="editEntryDate" class="time-input" required>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Clock In Time | 上班时间:</label>
+                            <input type="datetime-local" id="editClockInTime" class="time-input" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Clock Out Time | 下班时间:</label>
+                            <input type="datetime-local" id="editClockOutTime" class="time-input" required>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Notes | 备注:</label>
+                            <input type="text" id="editEntryNotes" class="time-input" placeholder="Optional notes...">
+                        </div>
+                    </div>
+                    <div style="display: flex; gap: 1rem; margin-top: 1rem;">
+                        <button type="button" onclick="hideEditEntryModal()" style="flex: 1; padding: 0.5rem; background: #6b7280; color: white; border: none; border-radius: 0.25rem;">Cancel | 取消</button>
+                        <button type="submit" style="flex: 1; padding: 0.5rem; background: #3b82f6; color: white; border: none; border-radius: 0.25rem;">Save Changes | 保存更改</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <style>
+        @keyframes spin {
+            to { transform: rotate(360deg); }
         }
+    </style>
+
+    <script>
+        // Global application variables
+        let caregivers = [];
+        let currentCaregiver = null;
+        let activeCaregiver = null; // Currently working caregiver
+        let clockInTime = null; // Clock in time for active caregiver
+        let isClocked = false;
+        let startTime = null;
+        let hoursWorked = 0;
+        let timerInterval = null;
+        let retryQueue = [];
+
+        let googleSheetsConfig = {
+            webAppUrl: null,
+            spreadsheetId: null,
+            isConnected: false
+        };
+
+        // Initialize app
+        function initApp() {
+            console.log('Initializing caregiver app with Google Sheets...');
+            
+            // Load active caregiver from localStorage
+            try {
+                const savedActiveCaregiver = localStorage.getItem('activeCaregiver');
+                if (savedActiveCaregiver) {
+                    activeCaregiver = JSON.parse(savedActiveCaregiver);
+                }
+                clockInTime = localStorage.getItem('clockInTime');
+                
+                // Validate activeCaregiver still exists in current caregivers list
+                if (activeCaregiver) {
+                    const currentCaregivers = JSON.parse(localStorage.getItem('caregivers') || '[]');
+                    const caregiverStillExists = currentCaregivers.find(c => c.id === activeCaregiver.id);
+                    
+                    if (!caregiverStillExists) {
+                        console.log('Active caregiver no longer exists, clearing stale state');
+                        activeCaregiver = null;
+                        clockInTime = null;
+                        startTime = null;
+                        localStorage.removeItem('activeCaregiver');
+                        localStorage.removeItem('clockInTime');
+                    }
+                }
+                
+                // Set startTime for backwards compatibility
+                if (clockInTime) {
+                    startTime = new Date(clockInTime);
+                }
+                
+                // Start timer if there's an active caregiver
+                if (activeCaregiver && clockInTime) {
+                    startTimer();
+                }
+            } catch (e) {
+                console.warn('Could not load active caregiver:', e);
+                // Clear potentially corrupted data
+                activeCaregiver = null;
+                clockInTime = null;
+                startTime = null;
+                localStorage.removeItem('activeCaregiver');
+                localStorage.removeItem('clockInTime');
+            }
+            
+            // Hide loading screen
+            setTimeout(() => {
+                document.getElementById('loadingScreen').classList.add('hide');
+                document.getElementById('app').classList.add('loaded');
+            }, 1000);
+            
+            // Start clock
+            updateCurrentTime();
+            setInterval(updateCurrentTime, 1000);
+            
+            // Load saved data
+            loadData();
+            loadGoogleSheetsConfig();
+            loadCaregivers();
+            
+            console.log('App initialized successfully!');
+        }
+
+        function updateCurrentTime() {
+            const now = new Date();
+            const options = {
+                weekday: 'long',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            };
+            document.getElementById('currentTime').textContent = 
+                now.toLocaleDateString('en-US', options);
+        }
+
+        async function clockIn() {
+            if (isClocked) return;
+            if (!currentCaregiver) {
+                showNotification('Please select a caregiver first | 请先选择护工', 'error');
+                return;
+            }
+            
+            isClocked = true;
+            startTime = new Date();
+            
+            // Update UI
+            const currentStatus = document.getElementById('currentStatus');
+            if (currentStatus) {
+                currentStatus.textContent = 'Clocked In | 已上班';
+                currentStatus.style.background = '#fef3c7';
+                currentStatus.style.color = '#92400e';
+                currentStatus.style.borderColor = '#f59e0b';
+            }
+            
+            const clockInBtn = document.getElementById('clockInBtn');
+            const clockOutBtn = document.getElementById('clockOutBtn');
+            const liveTimer = document.getElementById('liveTimer');
+            
+            if (clockInBtn) clockInBtn.disabled = true;
+            if (clockOutBtn) clockOutBtn.disabled = false;
+            if (liveTimer) liveTimer.style.display = 'block';
+            
+            // Start timer
+            timerInterval = setInterval(updateLiveTimer, 1000);
+            
+            // Note: We don't log CLOCK_IN events individually.
+            // Complete sessions will be logged when clock out happens.
+            
+            // Save state
+            saveData();
+            
+            console.log('Clocked in at:', startTime);
+            showNotification('Clocked in successfully! | 上班打卡成功！', 'success');
+        }
+
+        async function clockOut() {
+            if (!isClocked || !startTime) return;
+            if (!currentCaregiver) {
+                showNotification('No caregiver selected | 未选择护工', 'error');
+                return;
+            }
+            
+            const endTime = new Date();
+            const sessionHours = (endTime - startTime) / (1000 * 60 * 60);
+            
+            isClocked = false;
+            clearInterval(timerInterval);
+            timerInterval = null;
+            
+            // Update UI
+            const currentStatus = document.getElementById('currentStatus');
+            if (currentStatus) {
+                currentStatus.textContent = 'Ready to Work | 准备工作';
+                currentStatus.style.background = '#ecfdf5';
+                currentStatus.style.color = '#065f46';
+                currentStatus.style.borderColor = '#10b981';
+            }
+            
+            const clockInBtn = document.getElementById('clockInBtn');
+            const clockOutBtn = document.getElementById('clockOutBtn');
+            const liveTimer = document.getElementById('liveTimer');
+            
+            if (clockInBtn) clockInBtn.disabled = false;
+            if (clockOutBtn) clockOutBtn.disabled = true;
+            if (liveTimer) liveTimer.style.display = 'none';
+            
+            // Update hours
+            hoursWorked += sessionHours;
+            updateTimeDisplay();
+            
+            // Save to time entries for time log
+            try {
+                const timeEntry = {
+                    id: Date.now().toString(),
+                    clockIn: startTime.toISOString(),
+                    clockOut: endTime.toISOString(),
+                    notes: 'Automatic entry',
+                    createdAt: new Date().toISOString(),
+                    manual: false
+                };
+                
+                let currentTimeEntries = loadTimeEntries();
+                currentTimeEntries.push(timeEntry);
+                
+                // Save the updated entries
+                if (currentCaregiver) {
+                    localStorage.setItem(`timeEntries_${currentCaregiver.id}`, JSON.stringify(currentTimeEntries));
+                }
+                
+                // Update recent sessions display
+                populateCaregiversGrid();
+            } catch (e) {
+                console.warn('Could not save time entry:', e);
+            }
+            
+            // Log complete session to Google Sheets
+            await logToGoogleSheets('COMPLETE_SESSION', {
+                action: 'Complete Session',
+                timestamp: endTime.toISOString(),
+                caregiver: currentCaregiver.chineseName ? 
+                    `${currentCaregiver.name} | ${currentCaregiver.chineseName}` : 
+                    currentCaregiver.name,
+                clockIn: startTime.toLocaleTimeString(),
+                clockOut: endTime.toLocaleTimeString(),
+                date: startTime.toLocaleDateString(),
+                sessionHours: sessionHours.toFixed(2),
+                totalHours: hoursWorked.toFixed(2),
+                sessionId: Date.now().toString() // Unique ID for this session
+            });
+            
+            // Save state
+            saveData();
+            
+            showNotification(`Session completed! Worked: ${sessionHours.toFixed(1)} hours`, 'success');
+            
+            console.log('Clocked out. Session hours:', sessionHours.toFixed(2));
+        }
+
+        function updateLiveTimer() {
+            if (!startTime) return;
+            
+            const now = new Date();
+            const elapsed = now - startTime;
+            const hours = Math.floor(elapsed / (1000 * 60 * 60));
+            const minutes = Math.floor((elapsed % (1000 * 60 * 60)) / (1000 * 60));
+            const seconds = Math.floor((elapsed % (1000 * 60)) / 1000);
+            
+            document.getElementById('currentSessionTime').textContent = 
+                `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        }
+
+        function startTimer() {
+            if (timerInterval) {
+                clearInterval(timerInterval);
+            }
+            // Use the new updateAllTimers function instead of updateLiveTimer
+            timerInterval = setInterval(updateAllTimers, 1000);
+            updateAllTimers(); // Update immediately
+        }
+
+        function stopTimer() {
+            if (timerInterval) {
+                clearInterval(timerInterval);
+                timerInterval = null;
+            }
+        }
+
+        function updateTimeDisplay() {
+            document.getElementById('hoursWorked').textContent = hoursWorked.toFixed(1);
+            document.getElementById('hoursRemaining').textContent = Math.max(0, 160 - hoursWorked).toFixed(1);
+        }
+
+        // Google Sheets Integration Functions
+        
+        function loadGoogleSheetsConfig() {
+            try {
+                const saved = localStorage.getItem('googleSheetsConfig');
+                if (saved) {
+                    googleSheetsConfig = JSON.parse(saved);
+                    updateSyncStatus();
+                }
+            } catch (e) {
+                console.warn('Could not load Google Sheets config:', e);
+            }
+        }
+
+        function saveGoogleSheetsConfig() {
+            try {
+                localStorage.setItem('googleSheetsConfig', JSON.stringify(googleSheetsConfig));
+            } catch (e) {
+                console.warn('Could not save Google Sheets config:', e);
+            }
+        }
+
+        function updateSyncStatus() {
+            const indicator = document.getElementById('syncIndicator');
+            const text = document.getElementById('syncText');
+            const retryBtn = document.getElementById('retryBtn');
+            
+            if (googleSheetsConfig.isConnected) {
+                if (indicator) indicator.style.background = '#10b981';
+                if (text) text.textContent = 'Connected | 已连接';
+                if (retryBtn) retryBtn.style.display = 'none';
+            } else {
+                if (indicator) indicator.style.background = '#ef4444';
+                if (text) text.textContent = 'Not Connected | 未连接';
+                if (retryBtn) retryBtn.style.display = 'none';
+            }
+        }
+        
+        // Show retry button when there are failed syncs
+        function showRetryButton() {
+            const retryBtn = document.getElementById('retryBtn');
+            const retryQueue = JSON.parse(localStorage.getItem('retryQueue') || '[]');
+            
+            if (retryBtn) {
+                if (retryQueue.length > 0 && googleSheetsConfig.isConnected) {
+                    retryBtn.style.display = 'inline-block';
+                } else {
+                    retryBtn.style.display = 'none';
+                }
+            } else {
+                console.log('Retry button element not found - creating notification instead');
+                if (retryQueue.length > 0) {
+                    showNotification('Data sync pending - will retry automatically | 数据同步待处理 - 将自动重试', 'warning');
+                }
+            }
+        }
+        
+        // Manual retry function
+        async function retryFailedSyncs() {
+            const retryQueue = JSON.parse(localStorage.getItem('retryQueue') || '[]');
+            
+            if (retryQueue.length === 0) {
+                showNotification('No failed syncs to retry | 没有失败的同步需要重试', 'info');
+                return;
+            }
+            
+            showNotification(`Retrying ${retryQueue.length} failed syncs... | 重试${retryQueue.length}个失败的同步...`, 'info');
+            
+            const successfulRetries = [];
+            
+            for (const item of retryQueue) {
+                try {
+                    await logToGoogleSheets(item.eventType, item.data);
+                    successfulRetries.push(item);
+                } catch (error) {
+                    console.error('Retry failed:', error);
+                }
+                
+                // Small delay between retries
+                await new Promise(resolve => setTimeout(resolve, 500));
+            }
+            
+            // Remove successful retries from queue
+            const remainingQueue = retryQueue.filter(item => !successfulRetries.includes(item));
+            localStorage.setItem('retryQueue', JSON.stringify(remainingQueue));
+            
+            showNotification(`Retried ${successfulRetries.length}/${retryQueue.length} syncs successfully | 成功重试${successfulRetries.length}/${retryQueue.length}个同步`, 'success');
+            
+            showRetryButton();
+        }
+
+        async function logToGoogleSheets(eventType, data) {
+            if (!googleSheetsConfig.isConnected) {
+                console.log('Google Sheets not connected, skipping sync');
+                return;
+            }
+
+            try {
+                console.log('Starting Google Sheets sync...', { eventType, data });
+                
+                // Update sync status to show syncing
+                const syncIndicator = document.getElementById('syncIndicator');
+                const syncText = document.getElementById('syncText');
+                if (syncIndicator) syncIndicator.style.background = '#f59e0b';
+                if (syncText) syncText.textContent = 'Syncing... | 同步中...';
+
+                let response;
+                
+                if (eventType === 'CAREGIVER_ADDED' || eventType === 'CAREGIVER_UPDATED') {
+                    // Sync caregiver data
+                    const caregiverData = {
+                        name: data.caregiver || data.name,
+                        chineseName: data.chineseName || '',
+                        hours: data.hours || 160
+                    };
+                    response = await syncCaregiverToGoogleSheet(caregiverData);
+                } else if (eventType === 'UPDATE_SESSION' || eventType === 'DELETE_SESSION') {
+                    // For session updates/deletes, use the data directly
+                    const sessionUpdateData = {
+                        sessionId: data.sessionId,
+                        caregiverName: data.caregiverName || data.caregiver,
+                        date: data.date,
+                        clockIn: data.clockIn,
+                        clockOut: data.clockOut,
+                        duration: data.duration,
+                        notes: data.notes || 'Session updated',
+                        deviceId: data.deviceId || getDeviceId(),
+                        eventType: eventType
+                    };
+                    
+                    response = await syncSessionUpdateToGoogleSheet(sessionUpdateData);
+                } else {
+                    // For complete sessions, format the data properly
+                    const sessionData = {
+                        timestamp: data.sessionId || new Date().toISOString(),
+                        caregiverName: data.caregiver,
+                        date: data.date || new Date().toLocaleDateString(),
+                        clockIn: data.clockIn || '',
+                        clockOut: data.clockOut || '',
+                        duration: data.sessionHours || '',
+                        notes: data.action || 'Session completed',
+                        deviceId: getDeviceId()
+                    };
+                    
+                    response = await syncSessionToGoogleSheet(sessionData);
+                }
+                
+                console.log('Google Sheets response:', response);
+                
+                if (response.success) {
+                    console.log('Sync successful!');
+                    // Update sync status to success
+                    setTimeout(() => {
+                        const syncIndicator = document.getElementById('syncIndicator');
+                        const syncText = document.getElementById('syncText');
+                        if (syncIndicator) syncIndicator.style.background = '#10b981';
+                        if (syncText) syncText.textContent = 'Synced | 已同步';
+                    }, 1000);
+                    
+                    showNotification('Data synced to Google Sheets successfully! | 数据已成功同步到谷歌表格！', 'success');
+                } else {
+                    throw new Error(response.error || 'Unknown sync error');
+                }
+
+            } catch (error) {
+                console.error('Error syncing to Google Sheets:', error);
+                
+                // Update sync status to error with more details
+                const syncIndicator = document.getElementById('syncIndicator');
+                const syncText = document.getElementById('syncText');
+                if (syncIndicator) syncIndicator.style.background = '#ef4444';
+                
+                let errorText = 'Sync Error';
+                if (error.message.includes('403')) {
+                    errorText = 'Permission Error';
+                } else if (error.message.includes('404')) {
+                    errorText = 'Not Found';
+                } else if (error.message.includes('timeout')) {
+                    errorText = 'Timeout';
+                }
+                
+                if (syncText) syncText.textContent = `${errorText} | 同步错误`;
+                
+                // Show user-friendly error message
+                showNotification(`Sync failed: ${error.message}. Data saved locally for retry. | 同步失败：${error.message}。数据已本地保存以供重试。`, 'error');
+                
+                // Store for retry later
+                storeForRetry(eventType, data);
+                if (showRetryButton && typeof showRetryButton === 'function') {
+                    showRetryButton();
+                }
+            }
+        }
+
+        async function syncSessionToGoogleSheet(sessionData) {
+            const url = googleSheetsConfig.webAppUrl;
+            
+            console.log('Sending session to Google Apps Script via JSONP:', url);
+            console.log('Session data:', sessionData);
+            
+            try {
+                const callbackName = 'sessionSyncCallback_' + Date.now();
+                const script = document.createElement('script');
+                
+                const result = await new Promise((resolve, reject) => {
+                    window[callbackName] = function(data) {
+                        console.log('JSONP Session sync response:', data);
+                        delete window[callbackName];
+                        if (document.head.contains(script)) {
+                            document.head.removeChild(script);
+                        }
+                        resolve(data);
+                    };
+                    
+                    script.onerror = function() {
+                        console.error('JSONP session sync failed to load');
+                        delete window[callbackName];
+                        if (document.head.contains(script)) {
+                            document.head.removeChild(script);
+                        }
+                        reject(new Error('JSONP session sync request failed'));
+                    };
+                    
+                    // Add device identifier
+                    const sessionWithDevice = {
+                        ...sessionData,
+                        deviceId: getDeviceId()
+                    };
+                    
+                    const valuesParam = encodeURIComponent(JSON.stringify(sessionWithDevice));
+                    const jsonpUrl = `${url}?callback=${callbackName}&dataType=session&values=${valuesParam}&_t=${Date.now()}`;
+                    console.log('JSONP Session sync URL length:', jsonpUrl.length);
+                    
+                    script.src = jsonpUrl;
+                    document.head.appendChild(script);
+                    
+                    setTimeout(() => {
+                        if (window[callbackName]) {
+                            delete window[callbackName];
+                            if (document.head.contains(script)) {
+                                document.head.removeChild(script);
+                            }
+                            reject(new Error('JSONP session sync timeout'));
+                        }
+                    }, 15000);
+                });
+                
+                if (result.success) {
+                    return { success: true, data: result };
+                } else {
+                    throw new Error(result.error || 'Unknown error from Apps Script');
+                }
+                
+            } catch (error) {
+                console.error('JSONP session sync error:', error);
+                return { success: false, error: error.message };
+            }
+        }
+        
+        async function syncSessionUpdateToGoogleSheet(sessionData) {
+            const url = googleSheetsConfig.webAppUrl;
+            
+            console.log('Sending session update to Google Apps Script via JSONP:', url);
+            console.log('Session update data:', sessionData);
+            
+            try {
+                const callbackName = 'sessionUpdateCallback_' + Date.now();
+                const script = document.createElement('script');
+                
+                const result = await new Promise((resolve, reject) => {
+                    window[callbackName] = function(data) {
+                        console.log('JSONP Session update response:', data);
+                        delete window[callbackName];
+                        if (document.head.contains(script)) {
+                            document.head.removeChild(script);
+                        }
+                        resolve(data);
+                    };
+                    
+                    script.onerror = function() {
+                        console.error('JSONP session update failed to load');
+                        delete window[callbackName];
+                        if (document.head.contains(script)) {
+                            document.head.removeChild(script);
+                        }
+                        reject(new Error('JSONP session update request failed'));
+                    };
+                    
+                    // Add device identifier
+                    const sessionUpdateWithDevice = {
+                        ...sessionData,
+                        deviceId: getDeviceId()
+                    };
+                    
+                    const valuesParam = encodeURIComponent(JSON.stringify(sessionUpdateWithDevice));
+                    const jsonpUrl = `${url}?callback=${callbackName}&dataType=session&values=${valuesParam}&_t=${Date.now()}`;
+                    console.log('JSONP Session update URL length:', jsonpUrl.length);
+                    
+                    script.src = jsonpUrl;
+                    document.head.appendChild(script);
+                    
+                    setTimeout(() => {
+                        if (window[callbackName]) {
+                            delete window[callbackName];
+                            if (document.head.contains(script)) {
+                                document.head.removeChild(script);
+                            }
+                            reject(new Error('JSONP session update timeout'));
+                        }
+                    }, 15000);
+                });
+                
+                if (result.success) {
+                    return { success: true, data: result };
+                } else {
+                    throw new Error(result.error || 'Unknown error from Apps Script');
+                }
+                
+            } catch (error) {
+                console.error('JSONP session update error:', error);
+                return { success: false, error: error.message };
+            }
+        }
+        
+        async function syncCaregiverToGoogleSheet(caregiverData) {
+            const url = googleSheetsConfig.webAppUrl;
+            
+            console.log('Sending caregiver to Google Apps Script via JSONP:', url);
+            console.log('Caregiver data:', caregiverData);
+            
+            try {
+                const callbackName = 'caregiverSyncCallback_' + Date.now();
+                const script = document.createElement('script');
+                
+                const result = await new Promise((resolve, reject) => {
+                    window[callbackName] = function(data) {
+                        console.log('JSONP Caregiver sync response:', data);
+                        delete window[callbackName];
+                        if (document.head.contains(script)) {
+                            document.head.removeChild(script);
+                        }
+                        resolve(data);
+                    };
+                    
+                    script.onerror = function() {
+                        console.error('JSONP caregiver sync failed to load');
+                        delete window[callbackName];
+                        if (document.head.contains(script)) {
+                            document.head.removeChild(script);
+                        }
+                        reject(new Error('JSONP caregiver sync request failed'));
+                    };
+                    
+                    const valuesParam = encodeURIComponent(JSON.stringify(caregiverData));
+                    const jsonpUrl = `${url}?callback=${callbackName}&dataType=caregiver&values=${valuesParam}&_t=${Date.now()}`;
+                    console.log('JSONP Caregiver sync URL length:', jsonpUrl.length);
+                    
+                    script.src = jsonpUrl;
+                    document.head.appendChild(script);
+                    
+                    setTimeout(() => {
+                        if (window[callbackName]) {
+                            delete window[callbackName];
+                            if (document.head.contains(script)) {
+                                document.head.removeChild(script);
+                            }
+                            reject(new Error('JSONP caregiver sync timeout'));
+                        }
+                    }, 15000);
+                });
+                
+                if (result.success) {
+                    return { success: true, data: result };
+                } else {
+                    throw new Error(result.error || 'Unknown error from Apps Script');
+                }
+                
+            } catch (error) {
+                console.error('JSONP caregiver sync error:', error);
+                return { success: false, error: error.message };
+            }
+        }
+        
+        function getDeviceId() {
+            let deviceId = localStorage.getItem('deviceId');
+            if (!deviceId) {
+                deviceId = 'device_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+                localStorage.setItem('deviceId', deviceId);
+            }
+            return deviceId;
+        }
+
+        function storeForRetry(eventType, data) {
+            try {
+                const retryData = JSON.parse(localStorage.getItem('retryQueue') || '[]');
+                retryData.push({ eventType, data, timestamp: new Date().toISOString() });
+                localStorage.setItem('retryQueue', JSON.stringify(retryData));
+            } catch (e) {
+                console.warn('Could not store retry data:', e);
+            }
+        }
+
+        // Data Synchronization Functions
+        async function loadDataFromGoogleSheets() {
+            if (!googleSheetsConfig.isConnected || !googleSheetsConfig.webAppUrl) {
+                console.log('Google Sheets not configured, skipping data load');
+                showNotification('Set up Google Sheets sync for cross-device data sharing | 设置谷歌表格同步以实现跨设备数据共享', 'info');
+                return;
+            }
+
+            try {
+                console.log('Loading data from Google Sheets...');
+                showNotification('Loading data from Google Sheets... | 正在从谷歌表格加载数据...', 'info');
+                
+                const callbackName = 'dataLoadCallback_' + Date.now();
+                const script = document.createElement('script');
+                
+                const result = await new Promise((resolve, reject) => {
+                    window[callbackName] = function(response) {
+                        delete window[callbackName];
+                        if (document.head.contains(script)) {
+                            document.head.removeChild(script);
+                        }
+                        resolve(response);
+                    };
+                    
+                    // Request to read all data from Google Sheets (both caregivers and sessions)
+                    const jsonpUrl = `${googleSheetsConfig.webAppUrl}?action=read&callback=${callbackName}&_t=${Date.now()}`;
+                    console.log('Loading data from:', jsonpUrl);
+                    script.src = jsonpUrl;
+                    document.head.appendChild(script);
+                    
+                    setTimeout(() => {
+                        if (window[callbackName]) {
+                            delete window[callbackName];
+                            if (document.head.contains(script)) {
+                                document.head.removeChild(script);
+                            }
+                            reject(new Error('Timeout loading data from Google Sheets'));
+                        }
+                    }, 10000);
+                });
+
+                console.log('Data load result:', result);
+
+                if (result && result.success && result.data) {
+                    console.log('Successfully loaded data from Google Sheets:', result.data);
+                    
+                    // Process the loaded data with new structure
+                    await syncDataFromMultiTabSheet(result.data);
+                    showNotification('Data synced from Google Sheets! | 已从谷歌表格同步数据！', 'success');
+                } else {
+                    console.log('No data found in Google Sheets or read not supported');
+                    showNotification('No existing data found in Google Sheets | 谷歌表格中未找到现有数据', 'info');
+                }
+                
+            } catch (error) {
+                console.error('Error loading data from Google Sheets:', error);
+                showNotification('Failed to sync data from Google Sheets | 从谷歌表格同步数据失败', 'error');
+            }
+        }
+
+        async function syncDataFromMultiTabSheet(sheetData) {
+            try {
+                console.log('Processing multi-tab sheet data:', sheetData);
+                
+                // Handle the new structure with separate caregivers and sessions
+                const { caregivers: sheetCaregivers, sessions: sheetSessions } = sheetData;
+                
+                // Always clear existing caregivers and replace with sheet data (even if empty)
+                console.log('Clearing local caregivers and replacing with sheet data');
+                caregivers.length = 0;
+                
+                // Sync caregivers from sheet (if any)
+                if (sheetCaregivers && sheetCaregivers.length > 0) {
+                    console.log('Adding caregivers from sheet:', sheetCaregivers);
+                    
+                    sheetCaregivers.forEach(sheetCaregiver => {
+                        const caregiver = {
+                            id: Date.now().toString() + Math.random(),
+                            name: sheetCaregiver.name,
+                            chineseName: sheetCaregiver.chineseName || '',
+                            monthlyHours: sheetCaregiver.assignedHours || sheetCaregiver.hours || 160,
+                            role: sheetCaregiver.role || 'Primary Caregiver'
+                        };
+                        caregivers.push(caregiver);
+                    });
+                }
+                
+                // Always save the updated (possibly empty) caregivers list
+                localStorage.setItem('caregivers', JSON.stringify(caregivers));
+
+                // Load existing local time entries for merging (don't clear them)
+                console.log('Loading existing local time entries for merging with sheet data');
+                const existingTimeEntries = {};
+                caregivers.forEach(caregiver => {
+                    const localEntries = loadTimeEntriesForCaregiver(caregiver.id);
+                    existingTimeEntries[caregiver.id] = localEntries || [];
+                });
+                
+                // Initialize timeEntries with existing local data
+                timeEntries = existingTimeEntries;                // Sync sessions from sheet (if any) - merge with existing local data
+                if (sheetSessions && sheetSessions.length > 0) {
+                    console.log('Merging sessions from sheet with local data:', sheetSessions);
+                    
+                    const deviceId = getDeviceId();
+                    
+                    // Group clock-in and clock-out events by caregiver and timestamp proximity
+                    const sessionPairs = {};
+                    
+                    sheetSessions.forEach(sheetSession => {
+                        const caregiverName = sheetSession.caregiverName || sheetSession.caregiver;
+                        const eventType = sheetSession.eventType || 'SESSION'; // Handle both old and new formats
+                        
+                        if (eventType === 'CLOCK_IN' || eventType === 'Clock In') {
+                            const sessionKey = `${caregiverName}_${sheetSession.date}`;
+                            if (!sessionPairs[sessionKey]) sessionPairs[sessionKey] = {};
+                            sessionPairs[sessionKey].clockIn = sheetSession;
+                        } else if (eventType === 'CLOCK_OUT' || eventType === 'Clock Out') {
+                            const sessionKey = `${caregiverName}_${sheetSession.date}`;
+                            if (!sessionPairs[sessionKey]) sessionPairs[sessionKey] = {};
+                            sessionPairs[sessionKey].clockOut = sheetSession;
+                        } else if (sheetSession.clockIn && sheetSession.clockOut) {
+                            // Handle complete session records (old format)
+                            const sessionKey = `${caregiverName}_${sheetSession.date}_${Date.now()}`;
+                            sessionPairs[sessionKey] = {
+                                complete: sheetSession
+                            };
+                        }
+                    });
+                    
+                    // Process paired sessions
+                    Object.values(sessionPairs).forEach(pair => {
+                        let sessionData;
+                        
+                        if (pair.complete) {
+                            // Handle complete session record
+                            sessionData = pair.complete;
+                        } else if (pair.clockIn && pair.clockOut) {
+                            // Handle paired clock-in/clock-out events
+                            sessionData = {
+                                caregiverName: pair.clockIn.caregiverName || pair.clockIn.caregiver,
+                                date: pair.clockIn.date,
+                                clockIn: pair.clockIn.clockIn || pair.clockIn.time,
+                                clockOut: pair.clockOut.clockOut || pair.clockOut.time,
+                                duration: pair.clockOut.duration || '',
+                                notes: pair.clockOut.notes || pair.clockIn.notes || '',
+                                timestamp: pair.clockOut.timestamp || pair.clockIn.timestamp,
+                                deviceId: pair.clockOut.deviceId || pair.clockIn.deviceId
+                            };
+                        } else {
+                            // Skip incomplete pairs
+                            return;
+                        }
+                        
+                        // Filter out event records (DELETE_SESSION, UPDATE_SESSION, etc.)
+                        const notes = sessionData.notes || '';
+                        if (notes.includes('DELETE_SESSION') || notes.includes('UPDATE_SESSION') || 
+                            notes.includes('CLOCK_IN') || notes.includes('CLOCK_OUT') ||
+                            !sessionData.clockIn || !sessionData.clockOut) {
+                            return; // Skip event records and incomplete sessions
+                        }
+                        
+                        const caregiverName = sessionData.caregiverName;
+                        // Try to match caregivers by name (handling both display formats)
+                        let caregiver = caregivers.find(c => {
+                            const displayName = c.chineseName ? `${c.name} | ${c.chineseName}` : c.name;
+                            return c.name === caregiverName || displayName === caregiverName || 
+                                   caregiverName.includes(c.name) || c.name.includes(caregiverName.split(' | ')[0]);
+                        });
+                        
+                        if (caregiver) {
+                            // Initialize time entries if not exists
+                            if (!timeEntries[caregiver.id]) {
+                                timeEntries[caregiver.id] = [];
+                            }
+                            
+                            // Create proper date-time strings for clockIn and clockOut
+                            let clockInDateTime, clockOutDateTime;
+                            
+                            try {
+                                // Check if clockIn/clockOut are already full datetime strings or just times
+                                if (sessionData.clockIn && sessionData.clockOut) {
+                                    // If they look like full ISO dates, use them directly
+                                    if (sessionData.clockIn.includes('T') && sessionData.clockIn.includes('Z')) {
+                                        // These are full ISO datetime strings, but may have wrong dates
+                                        // Extract just the time parts and combine with the correct date
+                                        const clockInTime = new Date(sessionData.clockIn).toTimeString().split(' ')[0];
+                                        const clockOutTime = new Date(sessionData.clockOut).toTimeString().split(' ')[0];
+                                        
+                                        const sessionDate = sessionData.date.includes('T') ? 
+                                            sessionData.date.split('T')[0] : sessionData.date;
+                                        
+                                        clockInDateTime = new Date(sessionDate + 'T' + clockInTime).toISOString();
+                                        clockOutDateTime = new Date(sessionDate + 'T' + clockOutTime).toISOString();
+                                    } else {
+                                        // These are just time strings, combine with date
+                                        const sessionDate = sessionData.date.includes('T') ? 
+                                            sessionData.date.split('T')[0] : sessionData.date;
+                                        clockInDateTime = new Date(sessionDate + 'T' + sessionData.clockIn).toISOString();
+                                        clockOutDateTime = new Date(sessionDate + 'T' + sessionData.clockOut).toISOString();
+                                    }
+                                } else {
+                                    console.warn('Invalid session data - missing clock times:', sessionData);
+                                    return;
+                                }
+                            } catch (dateError) {
+                                console.warn('Error parsing session dates:', dateError, sessionData);
+                                return;
+                            }
+                            
+                            // Check for existing entry to avoid duplicates
+                            const sessionDate = new Date(clockInDateTime);
+                            const exists = timeEntries[caregiver.id].some(entry => {
+                                const entryDate = new Date(entry.clockIn);
+                                return Math.abs(entryDate - sessionDate) < 300000; // Within 5 minutes
+                            });
+                            
+                            if (!exists) {
+                                const entry = {
+                                    id: sessionData.timestamp || (Date.now().toString() + Math.random()),
+                                    clockIn: clockInDateTime,
+                                    clockOut: clockOutDateTime,
+                                    notes: sessionData.notes || 'Synced from Google Sheets',
+                                    createdAt: sessionData.timestamp || new Date().toISOString(),
+                                    manual: false,
+                                    deviceId: sessionData.deviceId || 'google-sheets',
+                                    source: 'google-sheets'
+                                };
+                                
+                                // Add sheet entry to local storage
+                                timeEntries[caregiver.id].push(entry);
+                                console.log('Added sheet session to local storage:', entry);
+                            }
+                        } else {
+                            console.warn('Caregiver not found for session:', caregiverName);
+                        }
+                    });
+                    
+                    // Save the merged time entries
+                    saveTimeEntries();
+                    console.log('Saved merged time entries to localStorage');
+                } else {
+                    console.log('No sheet sessions to merge');
+                    // Still save existing local entries
+                    saveTimeEntries();
+                }
+                
+                // Refresh the UI
+                populateCaregiversGrid();
+                updateSyncStatus();
+                
+                // Upload local sessions that aren't in Google Sheets yet
+                if (googleSheetsConfig.isConnected) {
+                    await uploadLocalSessionsToGoogleSheets();
+                }
+                
+                console.log('Multi-tab sync completed successfully');
+                
+            } catch (error) {
+                console.error('Error processing multi-tab sheet data:', error);
+                throw error;
+            }
+        }
+
+        // Upload local sessions that aren't marked as from Google Sheets
+        async function uploadLocalSessionsToGoogleSheets() {
+            console.log('Checking for local sessions to upload to Google Sheets...');
+            
+            try {
+                const caregivers = JSON.parse(localStorage.getItem('caregivers') || '[]');
+                const deviceId = getDeviceId();
+                let uploadCount = 0;
+                
+                for (const caregiver of caregivers) {
+                    const localEntries = loadTimeEntriesForCaregiver(caregiver.id);
+                    
+                    for (const entry of localEntries) {
+                        // Only upload entries that weren't sourced from Google Sheets and don't have 'google-sheets' deviceId
+                        if (entry.source !== 'google-sheets' && entry.deviceId !== 'google-sheets') {
+                            try {
+                                const clockInDate = new Date(entry.clockIn);
+                                const clockOutDate = new Date(entry.clockOut);
+                                const caregiverDisplayName = caregiver.chineseName ? `${caregiver.name} | ${caregiver.chineseName}` : caregiver.name;
+                                
+                                await logToGoogleSheets('SYNC_SESSION', {
+                                    caregiver: caregiverDisplayName,
+                                    caregiverName: caregiverDisplayName,
+                                    clockIn: clockInDate.toLocaleTimeString(),
+                                    clockOut: clockOutDate.toLocaleTimeString(),
+                                    date: clockInDate.toLocaleDateString(),
+                                    duration: ((clockOutDate - clockInDate) / (1000 * 60 * 60)).toFixed(2),
+                                    timestamp: entry.id,
+                                    deviceId: entry.deviceId || deviceId,
+                                    notes: entry.notes || 'Local session uploaded during sync'
+                                });
+                                
+                                uploadCount++;
+                                console.log('Uploaded local session:', entry.id);
+                                
+                            } catch (uploadError) {
+                                console.warn('Failed to upload session:', entry.id, uploadError);
+                            }
+                        }
+                    }
+                }
+                
+                if (uploadCount > 0) {
+                    console.log(`Successfully uploaded ${uploadCount} local sessions to Google Sheets`);
+                } else {
+                    console.log('No local sessions needed uploading');
+                }
+                
+            } catch (error) {
+                console.error('Error uploading local sessions to Google Sheets:', error);
+            }
+        }
+
+        // Data Export/Import Functions (Alternative Sync Method)
+        function exportData() {
+            try {
+                // Ensure caregivers array is loaded
+                if (!Array.isArray(caregivers)) {
+                    loadCaregiverData();
+                }
+                
+                const exportData = {
+                    caregivers: caregivers || [],
+                    currentCaregiver: currentCaregiver,
+                    timestamp: new Date().toISOString()
+                };
+                
+                // Add time entries for all caregivers
+                caregivers.forEach(caregiver => {
+                    const timeEntries = JSON.parse(localStorage.getItem(`timeEntries_${caregiver.id}`) || '[]');
+                    exportData[`timeEntries_${caregiver.id}`] = timeEntries;
+                });
+                
+                const dataString = JSON.stringify(exportData, null, 2);
+                const blob = new Blob([dataString], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `caregiver_data_${new Date().toISOString().split('T')[0]}.json`;
+                a.click();
+                
+                URL.revokeObjectURL(url);
+                showNotification('Data exported! Transfer file to other device | 数据已导出！将文件传输到其他设备', 'success');
+                
+            } catch (error) {
+                console.error('Export error:', error);
+                showNotification('Export failed | 导出失败', 'error');
+            }
+        }
+        
+        function showImportDialog() {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.json';
+            input.onchange = function(event) {
+                const file = event.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        try {
+                            const importedData = JSON.parse(e.target.result);
+                            importData(importedData);
+                        } catch (error) {
+                            console.error('Import error:', error);
+                            showNotification('Invalid file format | 无效文件格式', 'error');
+                        }
+                    };
+                    reader.readAsText(file);
+                }
+            };
+            input.click();
+        }
+        
+        function importData(importedData) {
+            try {
+                if (confirm('This will overwrite existing data. Continue? | 这将覆盖现有数据。是否继续？')) {
+                    // Import caregivers
+                    if (importedData.caregivers) {
+                        caregivers = importedData.caregivers;
+                        localStorage.setItem('caregivers', JSON.stringify(caregivers));
+                    }
+                    
+                    // Import time entries
+                    caregivers.forEach(caregiver => {
+                        const timeEntriesKey = `timeEntries_${caregiver.id}`;
+                        if (importedData[timeEntriesKey]) {
+                            localStorage.setItem(timeEntriesKey, JSON.stringify(importedData[timeEntriesKey]));
+                        }
+                    });
+                    
+                    // Refresh UI
+                    populateCaregiversGrid();
+                    
+                    showNotification('Data imported successfully! | 数据导入成功！', 'success');
+                }
+            } catch (error) {
+                console.error('Import error:', error);
+                showNotification('Import failed | 导入失败', 'error');
+            }
+        }
+
+        // Google Sheets Setup Modal Functions
+        
+        function showGoogleSheetsSetup() {
+            document.getElementById('googleSheetsModal').style.display = 'flex';
+        }
+
+        function hideGoogleSheetsSetup() {
+            document.getElementById('googleSheetsModal').style.display = 'none';
+        }
+
+        async function testGoogleSheets(event) {
+            event.preventDefault();
+            
+            const webAppUrl = document.getElementById('webAppUrl').value.trim();
+            const statusDiv = document.getElementById('connectionStatus');
+            
+            if (!webAppUrl) {
+                showConnectionStatus('Please enter the Web App URL | 请输入网络应用URL', 'error');
+                return;
+            }
+
+            showConnectionStatus('Testing connection... | 测试连接中...', 'info');
+
+            try {
+                console.log('Testing Google Apps Script URL:', webAppUrl);
+                
+                // Create a dynamic script tag for JSONP
+                const callbackName = 'googleSheetsCallback_' + Date.now();
+                const script = document.createElement('script');
+                
+                const result = await new Promise((resolve, reject) => {
+                    // Set up the callback function
+                    window[callbackName] = function(data) {
+                        console.log('JSONP Response received:', data);
+                        delete window[callbackName];
+                        if (document.head.contains(script)) {
+                            document.head.removeChild(script);
+                        }
+                        resolve(data);
+                    };
+                    
+                    // Set up error handling
+                    script.onerror = function(event) {
+                        console.error('JSONP script failed to load:', event);
+                        delete window[callbackName];
+                        if (document.head.contains(script)) {
+                            document.head.removeChild(script);
+                        }
+                        reject(new Error('JSONP request failed - check your Web App URL and make sure it\'s deployed properly'));
+                    };
+                    
+                    // Global error handler for script errors
+                    const originalErrorHandler = window.onerror;
+                    window.onerror = function(message, source, lineno, colno, error) {
+                        if (source && source.includes('script.google.com') && window[callbackName]) {
+                            console.error('Google Apps Script error:', message, error);
+                            delete window[callbackName];
+                            if (document.head.contains(script)) {
+                                document.head.removeChild(script);
+                            }
+                            reject(new Error('Google Apps Script error: ' + message));
+                            window.onerror = originalErrorHandler;
+                            return true;
+                        }
+                        return false;
+                    };
+                    
+                    // Create the JSONP URL for testing
+                    const timestamp = Date.now();
+                    const jsonpUrl = `${webAppUrl}?callback=${callbackName}&action=testConnection&_t=${timestamp}`;
+                    console.log('JSONP URL:', jsonpUrl);
+                    console.log('Testing connection at:', new Date().toISOString());
+                    
+                    script.src = jsonpUrl;
+                    document.head.appendChild(script);
+                    
+                    // Timeout after 10 seconds
+                    setTimeout(() => {
+                        if (window[callbackName]) {
+                            delete window[callbackName];
+                            if (document.head.contains(script)) {
+                                document.head.removeChild(script);
+                            }
+                            window.onerror = originalErrorHandler;
+                            reject(new Error('JSONP request timeout - no response after 10 seconds'));
+                        }
+                    }, 10000);
+                });
+                
+                console.log('Test result:', result);
+                
+                if (!result || !result.success) {
+                    throw new Error(result?.error || 'Connection failed - check your Web App URL and deployment settings');
+                }
+
+                // Save configuration (no spreadsheetId needed for Apps Script approach)
+                googleSheetsConfig = {
+                    webAppUrl,
+                    spreadsheetId: 'auto-detected', // Placeholder since Apps Script manages the sheet
+                    isConnected: true
+                };
+                saveGoogleSheetsConfig();
+                updateSyncStatus();
+
+                showConnectionStatus('✅ Connection successful! Data will now sync automatically. | ✅ 连接成功！数据将自动同步。', 'success');
+                
+                setTimeout(() => {
+                    hideGoogleSheetsSetup();
+                }, 2000);
+
+            } catch (error) {
+                console.error('Detailed connection test error:', error);
+                console.error('Error stack:', error.stack);
+                
+                let errorMessage = '';
+                
+                if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError') || error.name === 'TypeError') {
+                    errorMessage = `❌ Connection Error: ${error.message}
+
+🔧 **Troubleshooting Steps**:
+
+1. **Check Browser Settings**:
+   - Disable ad blockers temporarily
+   - Try incognito/private mode
+   - Clear browser cache and cookies
+
+2. **Network Issues**:
+   - Check internet connection
+   - Disable VPN if using one
+   - Try different network (mobile hotspot)
+
+3. **Google Apps Script Settings**:
+   - Verify "Who has access" is set to "Anyone"
+   - Try creating a new deployment
+   - Make sure script is saved before deploying
+
+4. **Alternative Test**:
+   Open this URL directly: ${webAppUrl}
+   It should show JSON with "success":true
+
+❌ 连接错误：无法访问谷歌应用脚本。
+
+🔧 详细错误: ${error.message}
+
+**Try refreshing this page and testing again.**`;
+                } else if (error.message.includes('404')) {
+                    errorMessage = `❌ URL Not Found (404)
+
+The Google Apps Script URL is incorrect or the deployment doesn't exist.
+
+🔧 **Fix**:
+1. Go to script.google.com
+2. Open your project
+3. Click "Deploy" → "Manage deployments"  
+4. Copy the correct Web App URL
+5. Make sure it ends with /exec
+
+❌ 找不到URL：Web应用URL不正确。`;
+                } else {
+                    errorMessage = `❌ Connection failed: ${error.message}
+
+🔧 Debug Info:
+- Web App URL: ${webAppUrl}
+- Error Type: ${error.name}
+- Browser Console: Press F12 and check Console tab for details
+
+❌ 连接失败：${error.message}`;
+                }
+                
+                showConnectionStatus(errorMessage, 'error');
+                googleSheetsConfig.isConnected = false;
+                updateSyncStatus();
+            }
+        }
+
+        async function initializeGoogleSheet(apiKey, spreadsheetId) {
+            // Check if headers exist
+            const readUrl = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/A1:H1?key=${apiKey}`;
+            const readResponse = await fetch(readUrl);
+            const data = await readResponse.json();
+
+            // If no data or empty, add headers
+            if (!data.values || data.values.length === 0) {
+                const headers = ['Timestamp', 'Caregiver', 'Date', 'Clock In', 'Clock Out', 'Session Hours', 'Total Hours', 'Action'];
+                const writeUrl = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/A1:H1?key=${apiKey}&valueInputOption=USER_ENTERED`;
+                
+                await fetch(writeUrl, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        values: [headers]
+                    })
+                });
+            }
+        }
+
+        function showConnectionStatus(message, type) {
+            const statusDiv = document.getElementById('connectionStatus');
+            statusDiv.style.display = 'block';
+            statusDiv.textContent = message;
+            statusDiv.className = `connection-status ${type}`;
+            
+            const colors = {
+                success: { bg: '#dcfce7', color: '#166534' },
+                error: { bg: '#fecaca', color: '#dc2626' },
+                info: { bg: '#dbeafe', color: '#1d4ed8' }
+            };
+            
+            const style = colors[type] || colors.info;
+            statusDiv.style.background = style.bg;
+            statusDiv.style.color = style.color;
+        }
+
+        // Notification System
+        function showNotification(message, type = 'info') {
+            // Simple notification - you could enhance this
+            console.log(`[${type.toUpperCase()}] ${message}`);
+            
+            // You could add a toast notification here
+            const notification = document.createElement('div');
+            notification.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                background: ${type === 'success' ? '#10b981' : '#ef4444'};
+                color: white;
+                padding: 1rem;
+                border-radius: 0.5rem;
+                z-index: 1001;
+                max-width: 300px;
+                box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            `;
+            notification.textContent = message;
+            
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                if (notification.parentNode) {
+                    notification.parentNode.removeChild(notification);
+                }
+            }, 3000);
+        }
+
+        // Data persistence functions
+        function saveData() {
+            try {
+                const data = {
+                    hoursWorked,
+                    isClocked,
+                    startTime: startTime ? startTime.toISOString() : null
+                };
+                localStorage.setItem('caregiverData', JSON.stringify(data));
+            } catch (e) {
+                console.warn('Could not save data to localStorage:', e);
+            }
+        }
+
+        function loadData() {
+            try {
+                const saved = localStorage.getItem('caregiverData');
+                if (saved) {
+                    const data = JSON.parse(saved);
+                    hoursWorked = data.hoursWorked || 0;
+                    updateTimeDisplay();
+                    
+                    if (data.isClocked && data.startTime) {
+                        startTime = new Date(data.startTime);
+                        clockIn();
+                    }
+                }
+            } catch (e) {
+                console.warn('Could not load saved data:', e);
+            }
+        }
+
+        // Caregiver Management Functions
+        function loadCaregivers() {
+            try {
+                const saved = localStorage.getItem('caregivers');
+                if (!saved) {
+                    // Add default caregiver if none exist
+                    const defaultCaregivers = [{
+                        id: Date.now().toString(),
+                        name: 'Maria Chen',
+                        chineseName: '陈玛丽亚',
+                        role: 'Primary Caregiver'
+                    }];
+                    localStorage.setItem('caregivers', JSON.stringify(defaultCaregivers));
+                }
+                
+                updateCaregiverDropdown(); // This calls populateCaregiversGrid
+                
+                // Auto-select first caregiver if none selected
+                const caregivers = JSON.parse(localStorage.getItem('caregivers') || '[]');
+                if (caregivers.length > 0 && !currentCaregiver) {
+                    selectCaregiver(caregivers[0].id);
+                }
+            } catch (e) {
+                console.warn('Could not load caregivers:', e);
+                localStorage.removeItem('caregivers');
+            }
+        }
+
+        function updateCaregiverDropdown() {
+            // This function is now replaced by populateCaregiversGrid
+            populateCaregiversGrid();
+        }
+
+        function populateCaregiversGrid() {
+            const caregivers = JSON.parse(localStorage.getItem('caregivers') || '[]');
+            const container = document.getElementById('caregiversList');
+            
+            if (caregivers.length === 0) {
+                container.innerHTML = '<p style="text-align: center; color: #6b7280; padding: 2rem;">No caregivers added yet. Click "Add Caregiver" to get started. | 暂无护工，请点击"添加护工"开始。</p>';
+                return;
+            }
+            
+            container.innerHTML = caregivers.map(caregiver => {
+                const isWorking = activeCaregiver && activeCaregiver.id === caregiver.id;
+                const sessions = loadTimeEntriesForCaregiver(caregiver.id);
+                const monthlyHours = calculateMonthlyHours(sessions);
+                const monthlyHoursLimit = caregiver.monthlyHours || caregiver.hours || 160; // Default to 160 hours
+                const remainingHours = Math.max(0, monthlyHoursLimit - monthlyHours);
+                
+                return `
+                    <div class="caregiver-card">
+                        <div class="caregiver-header">
+                            <div class="caregiver-avatar">
+                                ${caregiver.name.charAt(0).toUpperCase()}
+                            </div>
+                            <div class="caregiver-info">
+                                <h3>${caregiver.chineseName ? `${caregiver.name} | ${caregiver.chineseName}` : caregiver.name}</h3>
+                                <p>${caregiver.role}</p>
+                                <span class="caregiver-status ${isWorking ? 'status-working' : 'status-available'}">
+                                    ${isWorking ? 'Working | 工作中' : 'Available | 空闲'}
+                                </span>
+                            </div>
+                        </div>
+                        
+                        ${isWorking ? `
+                            <div class="caregiver-timer">
+                                <div class="timer-display" id="timer-${caregiver.id}">00:00:00</div>
+                                <div class="timer-label">Current Session | 当前工作时间</div>
+                            </div>
+                        ` : ''}
+                        
+                        <div class="caregiver-controls">
+                            <button class="clock-btn ${isWorking ? 'clock-out' : 'clock-in'}" 
+                                    onclick="${isWorking ? `clockOutCaregiver('${caregiver.id}')` : `clockInCaregiver('${caregiver.id}')`}">
+                                ${isWorking ? 'Clock Out | 下班打卡' : 'Clock In | 上班打卡'}
+                            </button>
+                            <button class="edit-caregiver-btn" onclick="editCaregiver('${caregiver.id}')">
+                                Edit | 编辑
+                            </button>
+                            <button class="delete-caregiver-btn" onclick="deleteCaregiver('${caregiver.id}')">
+                                Delete | 删除
+                            </button>
+                        </div>
+                        
+                        <div class="caregiver-stats">
+                            <div class="stat-card">
+                                <div class="stat-value">${monthlyHours.toFixed(1)}</div>
+                                <div class="stat-label">Hours This Month | 本月小时</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-value">${remainingHours.toFixed(1)}</div>
+                                <div class="stat-label">Hours Left | 剩余小时</div>
+                            </div>
+                        </div>
+                        
+                        <div class="caregiver-sessions">
+                            <div class="sessions-header">Recent Sessions | 最近工作记录</div>
+                            ${getRecentSessionsForCaregiver(caregiver.id)}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            
+            // Update timers for working caregivers
+            updateAllTimers();
+        }
+
+        function selectCaregiverFromGrid(caregiverId) {
+            // This function is deprecated in the new card layout
+            console.warn('selectCaregiverFromGrid is deprecated - using individual caregiver controls');
+        }
+
+        // These functions are deprecated in the new card layout
+        function populateRecentSessions() {
+            // No longer needed - sessions are shown in individual caregiver cards
+            return;
+        }
+
+        function deleteTimeEntry(entryId) {
+            // This function is now handled through the time logs modal
+            // TODO: Update to work with specific caregiver ID
+            console.warn('deleteTimeEntry needs caregiver context in new layout');
+        }
+
+        function selectCaregiver(caregiverId) {
+            console.log('selectCaregiver called with ID:', caregiverId);
+            if (!caregiverId) {
+                console.log('No caregiver ID provided, resetting UI');
+                currentCaregiver = null;
+                document.getElementById('activeCaregiver').textContent = 'No caregiver selected | 未选择护工';
+                document.getElementById('currentStatus').textContent = 'Select a caregiver above | 请在上方选择护工';
+                document.getElementById('clockInBtn').disabled = true;
+                document.getElementById('clockOutBtn').disabled = true;
+                return;
+            }
+
+            const caregivers = JSON.parse(localStorage.getItem('caregivers') || '[]');
+            console.log('Available caregivers:', caregivers);
+            currentCaregiver = caregivers.find(c => c.id == caregiverId);
+            console.log('Found caregiver:', currentCaregiver);
+            
+            if (currentCaregiver) {
+                // Show and update active status section
+                const activeCaregiver = document.getElementById('activeCaregiver');
+                const currentStatus = document.getElementById('currentStatus');
+
+                activeCaregiver.textContent = currentCaregiver.chineseName ? 
+                    `${currentCaregiver.name} | ${currentCaregiver.chineseName}` : 
+                    currentCaregiver.name;
+
+                // Enable buttons
+                document.getElementById('clockInBtn').disabled = false;
+                document.getElementById('clockOutBtn').disabled = false;
+
+                // Update status based on current session
+                const currentSession = localStorage.getItem(`currentSession_${currentCaregiver.id}`);
+                if (currentSession) {
+                    const session = JSON.parse(currentSession);
+                    if (session.clockInTime && !session.clockOutTime) {
+                        currentStatus.textContent = 'Clocked In | 已上班';
+                        currentStatus.style.background = '#fef3c7';
+                        currentStatus.style.color = '#92400e';
+                        currentStatus.style.borderColor = '#f59e0b';
+                    } else {
+                        currentStatus.textContent = 'Ready to Work | 准备工作';
+                        currentStatus.style.background = '#ecfdf5';
+                        currentStatus.style.color = '#065f46';
+                        currentStatus.style.borderColor = '#10b981';
+                    }
+                } else {
+                    currentStatus.textContent = 'Ready to Work | 准备工作';
+                    currentStatus.style.background = '#ecfdf5';
+                    currentStatus.style.color = '#065f46';
+                    currentStatus.style.borderColor = '#10b981';
+                }
+                
+                // Load caregiver-specific data
+                loadCaregiverData();
+                
+                console.log('UI updated for caregiver:', currentCaregiver.name);
+            } else {
+                console.log('Caregiver not found in storage');
+            }
+        }
+
+        function loadCaregiverData() {
+            if (!currentCaregiver) return;
+            
+            try {
+                const saved = localStorage.getItem(`caregiverData_${currentCaregiver.id}`);
+                if (saved) {
+                    const data = JSON.parse(saved);
+                    hoursWorked = data.hoursWorked || 0;
+                    isClocked = data.isClocked || false;
+                    startTime = data.startTime ? new Date(data.startTime) : null;
+                    
+                    updateTimeDisplay();
+                    
+                    if (isClocked) {
+                        startTimer();
+                    }
+                }
+            } catch (e) {
+                console.warn('Could not load caregiver data:', e);
+            }
+        }
+
+        function saveCaregiverData() {
+            if (!currentCaregiver) return;
+            
+            try {
+                const data = {
+                    hoursWorked,
+                    isClocked,
+                    startTime: startTime ? startTime.toISOString() : null
+                };
+                localStorage.setItem(`caregiverData_${currentCaregiver.id}`, JSON.stringify(data));
+            } catch (e) {
+                console.warn('Could not save caregiver data:', e);
+            }
+        }
+
+        function showAddCaregiverModal() {
+            document.getElementById('addCaregiverModal').style.display = 'flex';
+        }
+
+        function hideAddCaregiverModal() {
+            document.getElementById('addCaregiverModal').style.display = 'none';
+            document.getElementById('caregiverForm').reset();
+        }
+
+        function showEditUsersModal() {
+            document.getElementById('editUsersModal').style.display = 'flex';
+            loadCaregiversList();
+        }
+
+        function hideEditUsersModal() {
+            document.getElementById('editUsersModal').style.display = 'none';
+        }
+
+        function loadCaregiversList() {
+            const caregivers = JSON.parse(localStorage.getItem('caregivers') || '[]');
+            const container = document.getElementById('caregiversList');
+            
+            if (caregivers.length === 0) {
+                container.innerHTML = '<p style="text-align: center; color: #6b7280; padding: 2rem;">No caregivers added yet | 暂无护工</p>';
+                return;
+            }
+            
+            container.innerHTML = caregivers.map(caregiver => `
+                <div style="display: flex; align-items: center; justify-content: between; padding: 1rem; border: 1px solid #e5e7eb; border-radius: 0.5rem; margin-bottom: 0.5rem;">
+                    <div style="flex: 1;">
+                        <div style="font-weight: 500;">${caregiver.name}${caregiver.chineseName ? ' | ' + caregiver.chineseName : ''}</div>
+                        <div style="font-size: 0.875rem; color: #6b7280;">${caregiver.role}</div>
+                    </div>
+                    <div style="display: flex; gap: 0.5rem;">
+                        <button onclick="editCaregiver('${caregiver.id}')" style="padding: 0.25rem 0.5rem; background: #3b82f6; color: white; border: none; border-radius: 0.25rem; font-size: 0.875rem; cursor: pointer;">Edit | 编辑</button>
+                        <button onclick="deleteCaregiver('${caregiver.id}')" style="padding: 0.25rem 0.5rem; background: #ef4444; color: white; border: none; border-radius: 0.25rem; font-size: 0.875rem; cursor: pointer;">Delete | 删除</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function editCaregiver(caregiverId) {
+            const caregivers = JSON.parse(localStorage.getItem('caregivers') || '[]');
+            const caregiver = caregivers.find(c => c.id === caregiverId);
+            
+            if (caregiver) {
+                // Pre-populate the add caregiver form for editing
+                document.getElementById('caregiverName').value = caregiver.name;
+                document.getElementById('caregiverChineseName').value = caregiver.chineseName || '';
+                document.getElementById('caregiverRole').value = caregiver.role;
+                
+                // Store the ID for editing
+                document.getElementById('caregiverForm').setAttribute('data-editing-id', caregiverId);
+                
+                hideEditUsersModal();
+                showAddCaregiverModal();
+            }
+        }
+
+        function deleteCaregiver(caregiverId) {
+            if (confirm('Are you sure you want to delete this caregiver? This will also delete all their time logs. | 确定要删除此护工吗？这也会删除他们的所有时间记录。')) {
+                let caregivers = JSON.parse(localStorage.getItem('caregivers') || '[]');
+                caregivers = caregivers.filter(c => c.id !== caregiverId);
+                localStorage.setItem('caregivers', JSON.stringify(caregivers));
+                
+                // Delete caregiver's time logs
+                localStorage.removeItem(`timeEntries_${caregiverId}`);
+                localStorage.removeItem(`currentSession_${caregiverId}`);
+                
+                // Refresh the displays
+                loadCaregiversList();
+                populateCaregiversGrid();
+                
+                // If this was the selected caregiver, reset selection
+                if (currentCaregiver && currentCaregiver.id === caregiverId) {
+                    selectCaregiver(null); // This will update the UI appropriately
+                }
+            }
+        }
+
+        function addCaregiver(event) {
+            console.log('addCaregiver function called');
+            event.preventDefault();
+            
+            const name = document.getElementById('caregiverName')?.value?.trim() || '';
+            const chineseName = document.getElementById('caregiverChineseName')?.value?.trim() || '';
+            const role = document.getElementById('caregiverRole')?.value?.trim() || 'Primary Caregiver';
+            const editingId = document.getElementById('caregiverForm')?.getAttribute('data-editing-id');
+            
+            console.log('Form values:', { name, chineseName, role, editingId });
+            
+            if (!name) {
+                console.log('Name is empty, returning');
+                alert('Please enter a name | 请输入姓名');
+                return;
+            }
+            
+            let caregivers = JSON.parse(localStorage.getItem('caregivers') || '[]');
+            console.log('Existing caregivers:', caregivers);
+            
+            if (editingId) {
+                // Editing existing caregiver
+                const caregiverIndex = caregivers.findIndex(c => c.id === editingId);
+                if (caregiverIndex !== -1) {
+                    caregivers[caregiverIndex] = {
+                        ...caregivers[caregiverIndex],
+                        name: name,
+                        chineseName: chineseName,
+                        role: role,
+                        monthlyHours: caregivers[caregiverIndex].monthlyHours || 160 // Preserve or set default
+                    };
+                }
+                document.getElementById('caregiverForm').removeAttribute('data-editing-id');
+            } else {
+                // Adding new caregiver
+                const newCaregiver = {
+                    id: Date.now().toString(),
+                    name: name,
+                    chineseName: chineseName,
+                    role: role,
+                    monthlyHours: 160 // Default monthly hours
+                };
+                console.log('Adding new caregiver:', newCaregiver);
+                caregivers.push(newCaregiver);
+                
+                // Sync to Google Sheets if connected
+                if (googleSheetsConfig.isConnected) {
+                    logToGoogleSheets('CAREGIVER_ADDED', {
+                        caregiver: name,
+                        name: name,
+                        chineseName: chineseName,
+                        hours: 160 // Default monthly hours
+                    }).catch(error => {
+                        console.error('Failed to sync new caregiver:', error);
+                    });
+                }
+            }
+            
+            localStorage.setItem('caregivers', JSON.stringify(caregivers));
+            console.log('Saved caregivers to localStorage');
+            
+            updateCaregiverDropdown(); // This calls populateCaregiversGrid
+            hideAddCaregiverModal();
+            console.log('Function completed successfully');
+        }
+
+        // Initialize the app display
+        document.addEventListener('DOMContentLoaded', function() {
+            populateCaregiversGrid();
+            
+            // Load data from Google Sheets if properly configured
+            setTimeout(async () => {
+                if (googleSheetsConfig.isConnected && googleSheetsConfig.webAppUrl) {
+                    await loadDataFromGoogleSheets();
+                } else {
+                    console.log('Google Sheets not configured - skipping auto-sync');
+                    // Show helpful tip after 3 seconds
+                    setTimeout(() => {
+                        showNotification('💡 Tip: Set up Google Sheets sync for cross-device data sharing | 提示：设置谷歌表格同步以实现跨设备数据共享', 'info');
+                    }, 3000);
+                }
+            }, 1000); // Wait 1 second for UI to load first
+        });
+
+        // Override existing saveData to use caregiver-specific storage
+        function saveData() {
+            saveCaregiverData();
+        }
+
+        // Override existing loadData to not conflict with caregiver data
+        function loadData() {
+            // This is now handled by loadCaregiverData()
+            return;
+        }
+
+        // Time Log Management Functions
+        let timeEntries = [];
+
+        function loadTimeEntries() {
+            if (!currentCaregiver) return [];
+            
+            try {
+                const saved = localStorage.getItem(`timeEntries_${currentCaregiver.id}`);
+                return saved ? JSON.parse(saved) : [];
+            } catch (e) {
+                console.warn('Could not load time entries:', e);
+                return [];
+            }
+        }
+
+        function saveTimeEntries() {
+            if (!currentCaregiver) return;
+            
+            try {
+                localStorage.setItem(`timeEntries_${currentCaregiver.id}`, JSON.stringify(timeEntries));
+            } catch (e) {
+                console.warn('Could not save time entries:', e);
+            }
+        }
+
+        function showTimeLogsModal() {
+            if (!currentCaregiver) {
+                showNotification('Please select a caregiver first | 请先选择护工', 'error');
+                return;
+            }
+            
+            timeEntries = loadTimeEntries();
+            document.getElementById('logsCaregiverName').textContent = `(${currentCaregiver.name})`;
+            updateTimeLogsTable();
+            document.getElementById('timeLogsModal').style.display = 'flex';
+        }
+
+        function hideTimeLogsModal() {
+            document.getElementById('timeLogsModal').style.display = 'none';
+            hideAddEntryForm();
+            hideEditEntryModal();
+        }
+
+        function updateTimeLogsTable() {
+            const tbody = document.getElementById('timeLogsTableBody');
+            tbody.innerHTML = '';
+            
+            if (timeEntries.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="6" style="text-align: center; color: #6b7280; padding: 2rem;">
+                            No time entries found | 未找到时间记录<br>
+                            <small>Add your first entry using the button above | 使用上面的按钮添加第一条记录</small>
+                        </td>
+                    </tr>
+                `;
+                document.getElementById('monthlyHours').textContent = '0.0';
+                return;
+            }
+            
+            // Sort entries by date (newest first)
+            const sortedEntries = timeEntries.sort((a, b) => new Date(b.clockIn) - new Date(a.clockIn));
+            
+            let monthlyTotal = 0;
+            const oneMonthAgo = new Date();
+            oneMonthAgo.setDate(oneMonthAgo.getDate() - 30);
+            
+            sortedEntries.forEach(entry => {
+                const clockIn = new Date(entry.clockIn);
+                const clockOut = new Date(entry.clockOut);
+                const hours = (clockOut - clockIn) / (1000 * 60 * 60);
+                
+                // Add to monthly total if within last 30 days
+                if (clockIn >= oneMonthAgo) {
+                    monthlyTotal += hours;
+                }
+                
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${clockIn.toLocaleDateString()}</td>
+                    <td>${clockIn.toLocaleTimeString()}</td>
+                    <td>${clockOut.toLocaleTimeString()}</td>
+                    <td>${hours.toFixed(1)}h</td>
+                    <td>${entry.notes || '-'}</td>
+                    <td>
+                        <div class="log-actions">
+                            <button class="edit-btn" onclick="editTimeEntry('${entry.id}')">Edit | 编辑</button>
+                            <button class="delete-btn" onclick="deleteTimeEntry('${entry.id}')">Delete | 删除</button>
+                        </div>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+            
+            document.getElementById('monthlyHours').textContent = monthlyTotal.toFixed(1);
+        }
+
+        function showAddEntryForm() {
+            const form = document.getElementById('addEntryForm');
+            form.style.display = 'block';
+            
+            // Set default date to today
+            const today = new Date();
+            document.getElementById('entryDate').value = today.toISOString().split('T')[0];
+            
+            // Set default times (9 AM to 5 PM)
+            const defaultStart = new Date(today);
+            defaultStart.setHours(9, 0, 0, 0);
+            const defaultEnd = new Date(today);
+            defaultEnd.setHours(17, 0, 0, 0);
+            
+            document.getElementById('clockInTime').value = defaultStart.toISOString().slice(0, 16);
+            document.getElementById('clockOutTime').value = defaultEnd.toISOString().slice(0, 16);
+        }
+
+        function hideAddEntryForm() {
+            document.getElementById('addEntryForm').style.display = 'none';
+            // Reset form
+            document.getElementById('entryDate').value = '';
+            document.getElementById('clockInTime').value = '';
+            document.getElementById('clockOutTime').value = '';
+            document.getElementById('entryNotes').value = '';
+        }
+
+        function addManualEntry(event) {
+            event.preventDefault();
+            
+            const clockInTime = new Date(document.getElementById('clockInTime').value);
+            const clockOutTime = new Date(document.getElementById('clockOutTime').value);
+            const notes = document.getElementById('entryNotes').value.trim();
+            
+            // Validation
+            if (clockInTime >= clockOutTime) {
+                showNotification('Clock out time must be after clock in time | 下班时间必须晚于上班时间', 'error');
+                return;
+            }
+            
+            // Check for overlapping entries
+            const hasOverlap = timeEntries.some(entry => {
+                const existingIn = new Date(entry.clockIn);
+                const existingOut = new Date(entry.clockOut);
+                return (clockInTime < existingOut && clockOutTime > existingIn);
+            });
+            
+            if (hasOverlap) {
+                showNotification('Time entry overlaps with existing entry | 时间记录与现有记录重叠', 'error');
+                return;
+            }
+            
+            // Create new entry
+            const newEntry = {
+                id: Date.now().toString(),
+                clockIn: clockInTime.toISOString(),
+                clockOut: clockOutTime.toISOString(),
+                notes: notes,
+                createdAt: new Date().toISOString(),
+                manual: true
+            };
+            
+            timeEntries.push(newEntry);
+            saveTimeEntries();
+            updateTimeLogsTable();
+            hideAddEntryForm();
+            
+            showNotification('Time entry added successfully | 时间记录添加成功', 'success');
+            
+            // Sync to Google Sheets if connected
+            if (googleSheetsConfig.isConnected) {
+                logManualEntryToGoogleSheets(newEntry);
+            }
+        }
+
+        function editTimeEntry(entryId) {
+            const entry = timeEntries.find(e => e.id === entryId);
+            if (!entry) return;
+            
+            const clockIn = new Date(entry.clockIn);
+            const clockOut = new Date(entry.clockOut);
+            
+            // Populate edit form
+            document.getElementById('editEntryId').value = entryId;
+            document.getElementById('editEntryDate').value = clockIn.toISOString().split('T')[0];
+            document.getElementById('editClockInTime').value = clockIn.toISOString().slice(0, 16);
+            document.getElementById('editClockOutTime').value = clockOut.toISOString().slice(0, 16);
+            document.getElementById('editEntryNotes').value = entry.notes || '';
+            
+            document.getElementById('editEntryModal').style.display = 'flex';
+        }
+
+        function hideEditEntryModal() {
+            document.getElementById('editEntryModal').style.display = 'none';
+        }
+
+        function saveEditedEntry(event) {
+            event.preventDefault();
+            
+            const entryId = document.getElementById('editEntryId').value;
+            const clockInTime = new Date(document.getElementById('editClockInTime').value);
+            const clockOutTime = new Date(document.getElementById('editClockOutTime').value);
+            const notes = document.getElementById('editEntryNotes').value.trim();
+            
+            // Validation
+            if (clockInTime >= clockOutTime) {
+                showNotification('Clock out time must be after clock in time | 下班时间必须晚于上班时间', 'error');
+                return;
+            }
+            
+            // Check for overlapping entries (excluding current entry)
+            const hasOverlap = timeEntries.some(entry => {
+                if (entry.id === entryId) return false; // Skip current entry
+                const existingIn = new Date(entry.clockIn);
+                const existingOut = new Date(entry.clockOut);
+                return (clockInTime < existingOut && clockOutTime > existingIn);
+            });
+            
+            if (hasOverlap) {
+                showNotification('Time entry overlaps with existing entry | 时间记录与现有记录重叠', 'error');
+                return;
+            }
+            
+            // Update entry
+            const entryIndex = timeEntries.findIndex(e => e.id === entryId);
+            if (entryIndex !== -1) {
+                timeEntries[entryIndex] = {
+                    ...timeEntries[entryIndex],
+                    clockIn: clockInTime.toISOString(),
+                    clockOut: clockOutTime.toISOString(),
+                    notes: notes,
+                    lastModified: new Date().toISOString()
+                };
+                
+                saveTimeEntries();
+                updateTimeLogsTable();
+                hideEditEntryModal();
+                
+                showNotification('Time entry updated successfully | 时间记录更新成功', 'success');
+                
+                // Sync to Google Sheets if connected
+                if (googleSheetsConfig.isConnected) {
+                    logManualEntryToGoogleSheets(timeEntries[entryIndex]);
+                }
+            }
+        }
+
+        function deleteTimeEntry(entryId) {
+            if (!confirm('Are you sure you want to delete this time entry? | 确定要删除这条时间记录吗？')) {
+                return;
+            }
+            
+            timeEntries = timeEntries.filter(entry => entry.id !== entryId);
+            saveTimeEntries();
+            updateTimeLogsTable();
+            
+            showNotification('Time entry deleted successfully | 时间记录删除成功', 'success');
+        }
+
+        async function logManualEntryToGoogleSheets(entry) {
+            try {
+                const clockIn = new Date(entry.clockIn);
+                const clockOut = new Date(entry.clockOut);
+                const hours = (clockOut - clockIn) / (1000 * 60 * 60);
+                
+                await logToGoogleSheets('COMPLETE_SESSION', {
+                    action: 'Manual Entry',
+                    timestamp: entry.createdAt,
+                    caregiver: currentCaregiver.chineseName ? 
+                        `${currentCaregiver.name} | ${currentCaregiver.chineseName}` : 
+                        currentCaregiver.name,
+                    clockIn: clockIn.toLocaleTimeString(),
+                    clockOut: clockOut.toLocaleTimeString(),
+                    date: clockIn.toLocaleDateString(),
+                    sessionHours: hours.toFixed(2),
+                    totalHours: '', // We don't track total for manual entries
+                    sessionId: entry.id || Date.now().toString()
+                });
+            } catch (error) {
+                console.warn('Failed to sync manual entry to Google Sheets:', error);
+            }
+        }
+
+        // Start the app
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initApp);
+        } else {
+            initApp();
+        }
+        // New functions for individual caregiver cards
+        function loadTimeEntriesForCaregiver(caregiverId) {
+            try {
+                const saved = localStorage.getItem(`timeEntries_${caregiverId}`);
+                return saved ? JSON.parse(saved) : [];
+            } catch (e) {
+                console.warn('Could not load time entries for caregiver:', e);
+                return [];
+            }
+        }
+
+        function calculateTodayHours(sessions) {
+            const today = new Date().toDateString();
+            return sessions
+                .filter(session => new Date(session.clockIn).toDateString() === today)
+                .reduce((total, session) => {
+                    const clockIn = new Date(session.clockIn);
+                    const clockOut = new Date(session.clockOut);
+                    return total + ((clockOut - clockIn) / (1000 * 60 * 60));
+                }, 0);
+        }
+
+        function calculateMonthlyHours(sessions) {
+            const now = new Date();
+            const currentYear = now.getFullYear();
+            const currentMonth = now.getMonth();
+            
+            return sessions
+                .filter(session => {
+                    const sessionDate = new Date(session.clockIn);
+                    return sessionDate.getFullYear() === currentYear && sessionDate.getMonth() === currentMonth;
+                })
+                .reduce((total, session) => {
+                    const clockIn = new Date(session.clockIn);
+                    const clockOut = new Date(session.clockOut);
+                    return total + ((clockOut - clockIn) / (1000 * 60 * 60));
+                }, 0);
+        }
+
+        function getRecentSessionsForCaregiver(caregiverId) {
+            const sessions = loadTimeEntriesForCaregiver(caregiverId).slice(-3).reverse();
+            
+            if (sessions.length === 0) {
+                return '<p style="text-align: center; color: #6b7280; padding: 1rem;">No sessions yet | 暂无记录</p>';
+            }
+            
+            return sessions.map(session => {
+                const clockIn = new Date(session.clockIn);
+                const clockOut = new Date(session.clockOut);
+                const duration = ((clockOut - clockIn) / (1000 * 60 * 60)).toFixed(1);
+                
+                return `
+                    <div class="session-item" data-session-id="${session.id}">
+                        <div class="session-info">
+                            <div class="session-date">${clockIn.toLocaleDateString()}</div>
+                            <div class="session-times">
+                                ${clockIn.toLocaleTimeString()} - ${clockOut.toLocaleTimeString()}
+                            </div>
+                            <div class="session-duration">${duration}h</div>
+                        </div>
+                        <div class="session-actions">
+                            <button class="edit-session-btn" onclick="editSession('${caregiverId}', '${session.id}')" title="Edit | 编辑">
+                                ✏️
+                            </button>
+                            <button class="delete-session-btn" onclick="deleteSession('${caregiverId}', '${session.id}')" title="Delete | 删除">
+                                🗑️
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Session Management Functions
+        function editSession(caregiverId, sessionId) {
+            const sessions = loadTimeEntriesForCaregiver(caregiverId);
+            const session = sessions.find(s => s.id === sessionId);
+            
+            if (!session) {
+                showNotification('Session not found | 找不到会话记录', 'error');
+                return;
+            }
+            
+            // Populate the edit form
+            const clockIn = new Date(session.clockIn);
+            const clockOut = new Date(session.clockOut);
+            
+            document.getElementById('editSessionId').value = sessionId;
+            document.getElementById('editCaregiverId').value = caregiverId;
+            document.getElementById('editSessionDate').value = clockIn.toISOString().split('T')[0];
+            document.getElementById('editClockIn').value = clockIn.toTimeString().slice(0, 5);
+            document.getElementById('editClockOut').value = clockOut.toTimeString().slice(0, 5);
+            document.getElementById('editSessionNotes').value = session.notes || '';
+            
+            // Show the modal
+            document.getElementById('editSessionModal').style.display = 'flex';
+        }
+
+        function hideEditSessionModal() {
+            document.getElementById('editSessionModal').style.display = 'none';
+        }
+
+        async function saveSessionEdit(event) {
+            event.preventDefault();
+            
+            const sessionId = document.getElementById('editSessionId').value;
+            const caregiverId = document.getElementById('editCaregiverId').value;
+            const date = document.getElementById('editSessionDate').value;
+            const clockInTime = document.getElementById('editClockIn').value;
+            const clockOutTime = document.getElementById('editClockOut').value;
+            const notes = document.getElementById('editSessionNotes').value;
+            
+            // Validate times
+            if (clockInTime >= clockOutTime) {
+                showNotification('Clock out time must be after clock in time | 下班时间必须晚于上班时间', 'error');
+                return;
+            }
+            
+            // Create new timestamps
+            const clockInDateTime = new Date(`${date}T${clockInTime}`).toISOString();
+            const clockOutDateTime = new Date(`${date}T${clockOutTime}`).toISOString();
+            
+            // Update local storage
+            const sessions = loadTimeEntriesForCaregiver(caregiverId);
+            const sessionIndex = sessions.findIndex(s => s.id === sessionId);
+            
+            if (sessionIndex === -1) {
+                showNotification('Session not found | 找不到会话记录', 'error');
+                return;
+            }
+            
+            const oldSession = { ...sessions[sessionIndex] };
+            
+            // Update the session
+            sessions[sessionIndex] = {
+                ...sessions[sessionIndex],
+                clockIn: clockInDateTime,
+                clockOut: clockOutDateTime,
+                notes: notes,
+                lastModified: new Date().toISOString()
+            };
+            
+            // Save to localStorage
+            try {
+                localStorage.setItem(`timeEntries_${caregiverId}`, JSON.stringify(sessions));
+            } catch (e) {
+                console.warn('Could not save updated session:', e);
+                showNotification('Failed to save changes | 保存更改失败', 'error');
+                return;
+            }
+            
+            // Sync to Google Sheets if connected
+            if (googleSheetsConfig.isConnected) {
+                try {
+                    const caregivers = JSON.parse(localStorage.getItem('caregivers') || '[]');
+                    const caregiver = caregivers.find(c => c.id === caregiverId);
+                    const caregiverDisplayName = caregiver.chineseName ? `${caregiver.name} | ${caregiver.chineseName}` : caregiver.name;
+                    
+                    // Send complete session update data
+                    await logToGoogleSheets('UPDATE_SESSION', {
+                        sessionId: sessionId,
+                        caregiver: caregiverDisplayName,
+                        caregiverName: caregiverDisplayName,
+                        clockIn: new Date(clockInDateTime).toLocaleTimeString(),
+                        clockOut: new Date(clockOutDateTime).toLocaleTimeString(),
+                        date: new Date(clockInDateTime).toLocaleDateString(),
+                        duration: ((new Date(clockOutDateTime) - new Date(clockInDateTime)) / (1000 * 60 * 60)).toFixed(2),
+                        notes: notes || 'Updated session',
+                        deviceId: getDeviceId(),
+                        originalClockIn: oldSession.clockIn ? new Date(oldSession.clockIn).toLocaleTimeString() : '',
+                        originalClockOut: oldSession.clockOut ? new Date(oldSession.clockOut).toLocaleTimeString() : ''
+                    });
+                    
+                } catch (error) {
+                    console.warn('Failed to sync session edit to Google Sheets:', error);
+                    showNotification('Changes saved locally but sync to Google Sheets failed | 本地保存成功但同步到谷歌表格失败', 'warning');
+                }
+            }
+            
+            hideEditSessionModal();
+            populateCaregiversGrid();
+            showNotification('Session updated successfully | 会话记录更新成功', 'success');
+        }
+
+        async function deleteSession(caregiverId, sessionId) {
+            if (!confirm('Are you sure you want to delete this session? | 确定要删除这个会话记录吗？')) {
+                return;
+            }
+            
+            // Get session details before deletion for Google Sheets sync
+            const sessions = loadTimeEntriesForCaregiver(caregiverId);
+            const session = sessions.find(s => s.id === sessionId);
+            
+            if (!session) {
+                showNotification('Session not found | 找不到会话记录', 'error');
+                return;
+            }
+            
+            // Remove from local storage
+            const updatedSessions = sessions.filter(s => s.id !== sessionId);
+            
+            try {
+                localStorage.setItem(`timeEntries_${caregiverId}`, JSON.stringify(updatedSessions));
+            } catch (e) {
+                console.warn('Could not save updated sessions:', e);
+                showNotification('Failed to delete session | 删除会话记录失败', 'error');
+                return;
+            }
+            
+            // Sync deletion to Google Sheets if connected
+            if (googleSheetsConfig.isConnected) {
+                try {
+                    const caregivers = JSON.parse(localStorage.getItem('caregivers') || '[]');
+                    const caregiver = caregivers.find(c => c.id === caregiverId);
+                    const caregiverDisplayName = caregiver.chineseName ? `${caregiver.name} | ${caregiver.chineseName}` : caregiver.name;
+                    
+                    await logToGoogleSheets('DELETE_SESSION', {
+                        sessionId: sessionId,
+                        caregiverName: caregiverDisplayName,
+                        clockIn: new Date(session.clockIn).toLocaleTimeString(),
+                        clockOut: new Date(session.clockOut).toLocaleTimeString(),
+                        date: new Date(session.clockIn).toLocaleDateString(),
+                        timestamp: session.clockIn,
+                        deviceId: getDeviceId()
+                    });
+                    
+                } catch (error) {
+                    console.warn('Failed to sync session deletion to Google Sheets:', error);
+                    showNotification('Session deleted locally but sync to Google Sheets failed | 本地删除成功但同步到谷歌表格失败', 'warning');
+                }
+            }
+            
+            populateCaregiversGrid();
+            showNotification('Session deleted successfully | 会话记录删除成功', 'success');
+        }
+
+        async function clockInCaregiver(caregiverId) {
+            // Find the caregiver
+            const caregivers = JSON.parse(localStorage.getItem('caregivers') || '[]');
+            const caregiver = caregivers.find(c => c.id === caregiverId);
+            
+            if (!caregiver) {
+                showNotification('Caregiver not found | 找不到护工', 'error');
+                return;
+            }
+            
+            // Check if any caregiver is already working and validate the state
+            if (activeCaregiver) {
+                console.log('Active caregiver found:', activeCaregiver);
+                
+                // Validate that the active caregiver still exists in the current list
+                const activeStillExists = caregivers.find(c => c.id === activeCaregiver.id);
+                if (!activeStillExists) {
+                    console.log('Active caregiver no longer exists in caregiver list, clearing state');
+                    activeCaregiver = null;
+                    clockInTime = null;
+                    startTime = null;
+                    localStorage.removeItem('activeCaregiver');
+                    localStorage.removeItem('clockInTime');
+                } else {
+                    // Active caregiver is valid, show error
+                    showNotification('Another caregiver is currently working. Please clock them out first. | 另一位护工正在工作中，请先为其打卡下班。', 'error');
+                    return;
+                }
+            }
+            
+            // Set this caregiver as active
+            activeCaregiver = caregiver;
+            clockInTime = new Date().toISOString();
+            startTime = new Date(clockInTime); // Also set for backwards compatibility
+            
+            localStorage.setItem('activeCaregiver', JSON.stringify(activeCaregiver));
+            localStorage.setItem('clockInTime', clockInTime);
+            
+            // Log clock-in to Google Sheets if connected
+            if (googleSheetsConfig.isConnected) {
+                try {
+                    const caregiverDisplayName = caregiver.chineseName ? `${caregiver.name} | ${caregiver.chineseName}` : caregiver.name;
+                    await logToGoogleSheets('CLOCK_IN', {
+                        caregiver: caregiverDisplayName,
+                        caregiverName: caregiverDisplayName,
+                        clockIn: new Date(clockInTime).toLocaleTimeString(),
+                        date: new Date(clockInTime).toLocaleDateString(),
+                        timestamp: clockInTime,
+                        deviceId: getDeviceId()
+                    });
+                } catch (error) {
+                    console.warn('Failed to log clock-in to Google Sheets:', error);
+                }
+            }
+            
+            showNotification(`${caregiver.name} clocked in successfully | ${caregiver.name} 上班打卡成功`, 'success');
+            
+            // Refresh the display
+            populateCaregiversGrid();
+            startTimer();
+        }
+
+        async function clockOutCaregiver(caregiverId) {
+            if (!activeCaregiver || activeCaregiver.id !== caregiverId) {
+                showNotification('This caregiver is not currently working | 此护工当前未在工作', 'error');
+                return;
+            }
+            
+            const clockOutTime = new Date().toISOString();
+            
+            // Create time entry
+            const timeEntry = {
+                id: Date.now().toString(),
+                clockIn: clockInTime,
+                clockOut: clockOutTime,
+                notes: '',
+                deviceId: getDeviceId(),
+                source: 'local',
+                createdAt: clockOutTime
+            };
+            
+            // Save time entry for this caregiver
+            const existingEntries = loadTimeEntriesForCaregiver(caregiverId);
+            existingEntries.push(timeEntry);
+            
+            try {
+                localStorage.setItem(`timeEntries_${caregiverId}`, JSON.stringify(existingEntries));
+            } catch (e) {
+                console.warn('Could not save time entry:', e);
+            }
+            
+            // Log to Google Sheets if connected
+            if (googleSheetsConfig.isConnected) {
+                try {
+                    const caregiverDisplayName = activeCaregiver.chineseName ? `${activeCaregiver.name} | ${activeCaregiver.chineseName}` : activeCaregiver.name;
+                    const clockInDate = new Date(clockInTime);
+                    const clockOutDate = new Date(clockOutTime);
+                    const durationHours = ((clockOutDate - clockInDate) / (1000 * 60 * 60)).toFixed(2);
+                    
+                    await logToGoogleSheets('CLOCK_OUT', {
+                        caregiver: caregiverDisplayName,
+                        caregiverName: caregiverDisplayName,
+                        clockIn: clockInDate.toLocaleTimeString(),
+                        clockOut: clockOutDate.toLocaleTimeString(),
+                        date: clockOutDate.toLocaleDateString(),
+                        duration: durationHours,
+                        timestamp: clockOutTime,
+                        deviceId: getDeviceId()
+                    });
+                } catch (error) {
+                    console.warn('Failed to log to Google Sheets:', error);
+                }
+            }
+            
+            // Clear active caregiver
+            activeCaregiver = null;
+            clockInTime = null;
+            startTime = null; // Also clear backwards compatibility variable
+            
+            localStorage.removeItem('activeCaregiver');
+            localStorage.removeItem('clockInTime');
+            
+            showNotification(`Clock out successful | 下班打卡成功`, 'success');
+            
+            // Refresh the display
+            populateCaregiversGrid();
+            stopTimer();
+        }
+
+        // Debug function to clear working state
+        function clearWorkingState() {
+            console.log('Clearing all working state...');
+            activeCaregiver = null;
+            clockInTime = null;
+            startTime = null;
+            localStorage.removeItem('activeCaregiver');
+            localStorage.removeItem('clockInTime');
+            stopTimer();
+            populateCaregiversGrid();
+            showNotification('Working state cleared | 工作状态已清除', 'success');
+        }
+        
+        // Make it available globally for debugging
+        window.clearWorkingState = clearWorkingState;
+
+        function updateAllTimers() {
+            if (activeCaregiver && clockInTime) {
+                const timerDisplay = document.getElementById(`timer-${activeCaregiver.id}`);
+                if (timerDisplay) {
+                    const currentTime = new Date();
+                    const startTime = new Date(clockInTime);
+                    const elapsed = Math.floor((currentTime - startTime) / 1000);
+                    
+                    const hours = Math.floor(elapsed / 3600);
+                    const minutes = Math.floor((elapsed % 3600) / 60);
+                    const seconds = elapsed % 60;
+                    
+                    timerDisplay.textContent = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+                }
+            }
+        }
+
+        // Update the main timer function to work with new layout
+        function updateTimer() {
+            updateAllTimers();
+        }
+        
+        // Remove old selection-based functions that are no longer needed
+        function selectCaregiverFromGrid(caregiverId) {
+            // This function is no longer needed with the new card layout
+            console.warn('selectCaregiverFromGrid is deprecated');
+        }
+
     </script>
 </body>
 </html>
